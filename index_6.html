@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>キマる — 締切が来たら日が決まる</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500&display=swap" rel="stylesheet">
+<style>
+/* ===================================================================
+   キマる — スタイル
+
+   【色のルール】
+   紙の下地、墨の文字、朱が一色。それ以外の色は使わない。
+   朱は「決まったこと・決まりそうなこと」だけ。
+   急ぎ・催促・○△×の区別は、色ではなく太さと字形と枠線で示す。
+   表を緑や黄で塗ると生データが結論より目立ってしまうので、そうしない。
+   このルールを守るかぎり、朱を探せば結論が分かる画面になる。
+
+   【線のルール】
+   --rule は押せるもの・入力できるものの境界。3:1 以上を確保する。
+   --hair は意味を持たない仕切り。薄くてよい。
+   =================================================================== */
+:root{
+  --paper:#f4f1ea;
+  --surface:#fffdf8;
+  --ink:#221f19;
+  --muted:#6b6456;
+  --rule:#8f8674;       /* 部品の境界。紙の上で 3.2:1 */
+  --hair:#d8d1c0;       /* 装飾的な仕切り */
+  --accent:#b0421f;     /* 朱 */
+  --accent-soft:#f6e6df;
+  --ok:#3f6446;
+  --warn:#8a6320;
+  --off:#5f584c;
+  --mincho:"Shippori Mincho","Noto Serif JP","Source Han Serif JP","Yu Mincho","YuMincho","Hiragino Mincho ProN",serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Yu Gothic",YuGothic,Meiryo,sans-serif;
+  background:var(--paper); color:var(--ink); line-height:1.75; font-size:15px;
+  -webkit-font-smoothing:antialiased; font-synthesis-weight:none;
+}
+.wrap{max-width:720px;margin:0 auto;padding:0 22px 96px}
+@media(max-width:560px){ .wrap{padding:0 16px 72px} }
+.mj{font-family:var(--mincho);font-weight:500}
+
+/* ---- 上部バー ---- */
+.topbar{background:var(--surface);border-bottom:1px solid var(--rule);position:sticky;top:0;z-index:50;
+  display:flex;align-items:center;gap:12px;padding:7px 22px}
+.topbar .tag{font-size:10px;letter-spacing:.16em;color:var(--muted);border:1px solid var(--rule);padding:3px 7px;white-space:nowrap}
+.topbar .now{font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.topbar .sp{flex:1}
+.topbar button{font:inherit;font-size:12px;color:var(--ink);background:transparent;border:1px solid var(--rule);
+  padding:0 12px;height:40px;cursor:pointer;white-space:nowrap}
+.topbar button:hover{background:var(--paper)}
+@media(max-width:560px){ .topbar{padding:6px 14px;gap:6px} .topbar .tag{display:none} .topbar button{font-size:11px;padding:0 9px} }
+@media(max-width:380px){ .topbar button.opt{display:none} }
+
+/* ---- 見出し ---- */
+header.app{padding:20px 0 12px}
+.wordmark{font-family:var(--mincho);font-weight:500;font-size:30px;letter-spacing:.08em;line-height:1.2}
+.pitch{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.7}
+.wordmark em{font-style:normal;color:var(--accent)}
+.tagline{color:var(--muted);font-size:12px;margin-top:4px;letter-spacing:.04em}
+
+/* ---- タブ ---- */
+nav.tabs{display:flex;border-bottom:1px solid var(--rule);overflow-x:auto}
+nav.tabs button{font:inherit;font-size:14px;background:none;border:none;cursor:pointer;padding:12px 15px;
+  min-height:46px;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+nav.tabs button:first-child{padding-left:0}
+nav.tabs button.active{color:var(--ink);border-bottom-color:var(--ink)}
+nav.tabs .dot{display:inline-block;min-width:17px;height:17px;line-height:17px;text-align:center;
+  background:var(--ink);color:var(--surface);border-radius:999px;font-size:10px;margin-left:5px;padding:0 5px;font-variant-numeric:tabular-nums}
+
+/* ---- 状況バー ---- */
+.status{border-bottom:1px solid var(--hair);padding:16px 0 18px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.status .main{flex:1;min-width:210px}
+.status .lead{font-size:12px;letter-spacing:.1em;color:var(--muted)}
+.status .head{font-family:var(--mincho);font-weight:500;font-size:23px;line-height:1.45;margin-top:3px;letter-spacing:.03em}
+.status .head b{color:var(--accent);font-weight:500}
+.status .sub{font-size:12px;color:var(--muted);margin-top:5px;font-variant-numeric:tabular-nums}
+.status .sub .np{display:inline-block;margin-right:16px}
+.status .sub b{color:var(--ink)}
+.status.warn .sub b{font-weight:700}
+.status.crit{background:var(--accent-soft);border-bottom:2px solid var(--accent);padding:16px 16px 18px;margin:0 -16px}
+.status .act{flex:none}
+
+/* ---- セクション ---- */
+section{padding:26px 0;border-top:1px solid var(--hair)}
+.feed li,.detail,.arow{border-color:var(--hair)}
+section:first-of-type{border-top:none}
+.slabel{font-size:11px;letter-spacing:.18em;color:var(--muted);margin-bottom:14px}
+.note{font-size:13px;color:var(--muted);line-height:1.85}
+.note.tight{margin-top:10px}
+
+/* ---- 確定 ---- */
+.decided{border-top:2px solid var(--accent);padding-top:20px}
+.decided .k{font-size:11px;letter-spacing:.18em;color:var(--accent)}
+.decided .day{font-family:var(--mincho);font-weight:500;font-size:33px;line-height:1.3;margin-top:6px;letter-spacing:.04em}
+.decided .time{font-size:14px;color:var(--muted);margin-top:2px;font-variant-numeric:tabular-nums}
+.decided .meta{font-size:13px;color:var(--muted);margin-top:10px}
+.undecided{border-top:2px solid var(--off);padding-top:20px}
+.undecided .k{font-size:11px;letter-spacing:.18em;color:var(--off)}
+.undecided .day{font-family:var(--mincho);font-weight:500;font-size:23px;margin-top:6px}
+
+/* ---- 締切 ---- */
+.dl{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.dl .big{font-family:var(--mincho);font-weight:500;font-size:23px;font-variant-numeric:tabular-nums;letter-spacing:.03em}
+.left{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.left.urgent{color:var(--ink);font-weight:700;border-bottom:2px solid var(--ink)}
+
+/* ---- 人 ---- */
+.people{display:flex;flex-wrap:wrap;gap:7px}
+.who{font-size:13px;padding:6px 12px;border:1px solid var(--rule);background:var(--surface);display:inline-flex;align-items:center;gap:8px}
+.who.done{border-color:var(--ink);color:var(--ink)}
+.who.yet{border-style:dashed;color:var(--muted)}
+.who .x{font:inherit;font-size:12px;border:none;background:none;color:var(--muted);cursor:pointer;padding:10px 6px;margin:-10px -6px;min-height:40px}
+.who .x:hover{color:var(--accent)}
+.bar{height:3px;background:var(--hair);margin:0 0 14px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--ink);transition:width .4s}
+.saylist{font-size:13px;line-height:1.9}
+.saylist b{font-weight:600}
+
+/* ===== カレンダー ===== */
+.calhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.calhead .m{font-family:var(--mincho);font-weight:500;font-size:19px;letter-spacing:.06em}
+.calhead button{font:inherit;font-size:15px;width:44px;height:44px;cursor:pointer;border:1px solid var(--rule);background:var(--surface);color:var(--ink)}
+.calhead button:hover{background:var(--paper)}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--rule);border:1px solid var(--rule)}
+.grid .wd{background:var(--paper);text-align:center;font-size:10px;letter-spacing:.1em;color:var(--muted);padding:6px 0}
+.cell{position:relative;height:64px;border:none;background:var(--surface);color:var(--ink);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+  font:inherit;font-size:14px;padding:0;cursor:default}
+.cell.blank{background:var(--paper)}
+.cell.past{color:var(--muted);background:var(--paper)}
+.cell .d{font-variant-numeric:tabular-nums;line-height:1.15}
+.cell .y{font-size:10px;line-height:1.15;font-variant-numeric:tabular-nums;color:var(--ink)}
+.cell .lk{font-size:10px;letter-spacing:.04em;background:var(--accent);color:#fff;line-height:1.4;
+  font-weight:700;padding:0 4px;margin-top:1px}
+.cell.neutral .y{color:var(--muted)}
+.cell.cand{cursor:pointer}
+.cell.cand:hover{box-shadow:inset 0 0 0 2px var(--ink)}
+.cell.sel{box-shadow:inset 0 0 0 2px var(--ink)}
+.cell.lead{box-shadow:inset 0 0 0 2px var(--accent)}
+.cell.dead{background:var(--paper)}
+.cell.dead .d{text-decoration:line-through;text-decoration-color:var(--off)}
+.cell.dead .y{color:var(--muted)}
+.cell.addable::after{content:'＋';position:absolute;bottom:6px;font-size:11px;color:var(--hair)}
+.cell.addable:hover::after{color:var(--accent)}
+.cell.fixed{background:var(--accent)!important;color:#fff;box-shadow:none}
+.cell.fixed .y,.cell.fixed .lk{color:#fff}
+.cell.today .d::after{content:'';position:absolute;left:50%;transform:translateX(-50%);bottom:9px;width:14px;height:1px;background:currentColor}
+.cell.addable{cursor:pointer}
+.cell.addable:hover{background:var(--accent-soft)}
+.cell.addable:hover .d{color:var(--accent)}
+@media(max-width:560px){ .cell{height:56px} }
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:11px;color:var(--muted)}
+.legend i{display:inline-block;width:11px;height:11px;vertical-align:-1px;margin-right:5px;border:1px solid var(--rule)}
+
+.detail{margin-top:20px;padding-top:16px;border-top:1px solid var(--hair)}
+.detail h3{font-family:var(--mincho);font-weight:500;font-size:17px;letter-spacing:.04em;margin-bottom:12px}
+.detail .row{display:flex;gap:10px;font-size:13px;padding:4px 0;flex-wrap:wrap}
+.detail .m{flex:none;width:20px;text-align:center;font-weight:700}
+.m.y{font-size:16px} .m.n,.m.u{color:var(--muted);font-weight:400}
+
+/* ---- 表 ---- */
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.hint{font-size:11px;color:var(--muted);text-align:center;margin-top:10px;letter-spacing:.06em}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:9px 10px;text-align:left;border-bottom:1px solid var(--rule);white-space:nowrap}
+th{font-size:11px;color:var(--muted);font-weight:400;letter-spacing:.06em}
+table.mx th:first-child,table.mx td:first-child{position:sticky;left:0;background:var(--paper);z-index:1}
+table.mx td.c{text-align:center}
+table.mx td.y{font-size:17px;font-weight:700}
+table.mx td.mb{font-weight:400}
+table.mx td.n{color:var(--muted);font-weight:400}
+table.mx td.u{color:var(--hair);font-weight:400}
+table.mx th.hit,table.mx td.hit{box-shadow:inset 2px 0 0 var(--accent),inset -2px 0 0 var(--accent)}
+table.mx th.hit{color:var(--accent)}
+table.mx tfoot td{border-top:1px solid var(--rule);border-bottom:none;font-size:13px;color:var(--muted)}
+.pick{font-size:10px;letter-spacing:.1em;color:var(--accent);display:block}
+
+/* ---- 回答フォーム ---- */
+.answers{max-width:470px}
+.arow{display:grid;grid-template-columns:1fr auto;align-items:center;gap:14px;
+  padding:6px 10px;margin:0 -10px;border-bottom:1px solid var(--hair)}
+.arow:nth-child(even){background:var(--surface)}
+.arow .lab{font-size:15px}
+.arow.todo .lab::after{content:'　未記入';color:var(--ink);font-size:12px;font-weight:700}
+.opts{display:flex;border:1px solid var(--rule)}
+.opts button{font:inherit;font-size:17px;width:56px;height:48px;cursor:pointer;
+  border:none;border-left:1px solid var(--rule);background:var(--surface);color:var(--ink)}
+.opts button:first-child{border-left:none}
+.opts button:hover{background:var(--paper)}
+.opts button.on{background:var(--ink);color:var(--surface);font-weight:700}
+.quick{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+.quick button{font:inherit;font-size:13px;background:none;border:none;border-bottom:1px solid var(--rule);
+  color:var(--muted);cursor:pointer;padding:10px 4px;min-height:44px}
+.quick button:hover{color:var(--ink);border-bottom-color:var(--ink)}
+
+/* ---- 入力 ---- */
+input[type=text],input[type=time],input[type=datetime-local],select,textarea.cm{
+  font:inherit;font-size:15px;padding:10px 12px;min-height:44px;border:1px solid var(--rule);
+  background:var(--surface);color:var(--ink);border-radius:0}
+textarea.cm{width:100%;min-height:64px;resize:vertical;line-height:1.7}
+input:focus-visible,select:focus-visible,button:focus-visible,textarea:focus-visible{outline:2px solid var(--ink);outline-offset:1px}
+.field{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:7px 0}
+.field > label{font-size:12px;color:var(--muted);width:82px;flex:none}
+
+/* ---- ボタン ---- */
+.b{font:inherit;font-size:14px;padding:11px 20px;min-height:44px;cursor:pointer;border:1px solid var(--ink);background:var(--ink);color:var(--surface)}
+.b:hover{opacity:.86}
+.b.line{background:transparent;color:var(--ink)}
+.b.line:hover{background:var(--surface);opacity:1}
+.b.sm{font-size:13px;padding:9px 14px;min-height:42px}
+.b.quiet{border-color:var(--rule);color:var(--muted);background:transparent}
+.b.quiet:hover{color:var(--ink);border-color:var(--ink)}
+.b.danger{border-color:var(--accent);color:var(--accent);background:transparent}
+.brow{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+/* ---- 通知 ---- */
+.feed{list-style:none}
+.feed li{padding:12px 0;border-bottom:1px solid var(--hair);display:flex;gap:14px}
+.feed li:last-child{border-bottom:none}
+.feed .k{flex:none;width:48px;font-size:10px;letter-spacing:.06em;color:var(--muted);border:1px solid var(--rule);
+  text-align:center;height:21px;line-height:19px;margin-top:4px}
+.feed .k.fix{color:var(--accent);border-color:var(--accent)}
+.feed .bd{flex:1;min-width:0}
+.feed .t{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.feed .fmsg{font-size:14px}
+.empty{color:var(--muted);font-size:13px;padding:22px 0;line-height:2}
+
+.quote{margin-top:14px;padding:14px 16px;background:var(--surface);border-left:2px solid var(--rule)}
+.quote .txt{font-size:13px;line-height:1.9;white-space:pre-wrap;word-break:break-word}
+.quote .r{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;flex-wrap:wrap}
+
+.fixbar{border-top:2px solid var(--accent);padding:10px 0 12px;display:flex;align-items:baseline;
+  gap:12px;flex-wrap:wrap;border-bottom:1px solid var(--hair)}
+.fixbar .k{font-size:11px;letter-spacing:.18em;color:var(--accent)}
+.fixbar .d{font-family:var(--mincho);font-weight:500;font-size:18px;letter-spacing:.03em}
+.fixbar .t{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.fixbar .sp{flex:1}
+details.inv{margin-top:14px}
+details.inv summary{font-size:13px;color:var(--muted);cursor:pointer;padding:10px 0;min-height:40px;list-style:none}
+details.inv summary::-webkit-details-marker{display:none}
+details.inv summary::before{content:'▸ ';color:var(--rule)}
+details.inv[open] summary::before{content:'▾ '}
+.who .x{min-width:40px;justify-content:center;display:inline-flex;align-items:center}
+.timepair{display:flex;gap:8px;align-items:center;flex-wrap:nowrap}
+.toast{padding:12px 16px;border-left:2px solid var(--ink);background:var(--surface);font-size:13px;margin-bottom:18px}
+.undo{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  padding:12px 16px;border:1px solid var(--ink);background:var(--surface);font-size:13px;margin-bottom:18px}
+footer{font-size:11px;color:var(--muted);text-align:center;margin-top:44px;line-height:2.1;letter-spacing:.02em}
+</style>
+</head>
+<body>
+
+<div class="topbar" id="topbar"></div>
+
+<div class="wrap">
+  <header class="app">
+    <div class="wordmark">キ<em>マ</em>る</div>
+    <div class="tagline">締切が来たら、日が決まる。</div>
+    <p class="pitch" id="pitch"></p>
+  </header>
+
+  <nav class="tabs">
+    <button id="tab-cal" class="active" onclick="go('cal')">カレンダー</button>
+    <button id="tab-board" onclick="go('board')">集計</button>
+    <button id="tab-answer" onclick="go('answer')">回答</button>
+    <button id="tab-feed" onclick="go('feed')">通知 <span class="dot" id="feedDot" style="display:none">0</span></button>
+  </nav>
+
+  <div id="status"></div>
+  <div id="view"></div>
+  <footer id="footnote"></footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ===================================================================
+   キマる
+
+   ふつうの日程調整ツールは予定を集めるところで仕事が終わる。
+   だから回答が集まらないと、幹事が延々と催促する。
+   これは日を決めるツール。締切を持たせて、
+     ・いま何日に決まりそうかを常に画面に出す
+     ・締切が来たら、揃っていなくても決める
+   決まらないまま放置される状態をなくす。それが一点突破の売り。
+
+   割り切り：決めるのは「日」ひとつ。同じ日に昼と夜の2案は出せない。
+   時間の希望は回答の「ひとこと」で受け取る。
+   =================================================================== */
+
+/* Supabase の接続情報。空にするとデモモード（ネットもDBも不要）になります。
+   key は Publishable key。公開前提のキーです。Secret key は絶対に貼らないこと。 */
+const SUPABASE = {
+  url: 'https://syswwhswumqcfxdwjoiz.supabase.co',
+  key: 'sb_publishable_dENbiD90L6ZEHhkfxK5QIg_vNq72TDW'
+};
+
+const CONFIG = { scoreYes:2, scoreMaybe:1, scoreNo:-3, remindHours:[24,4] };
+const NOTE_KEY = '_note';
+const D = (m,d,h,mi) => new Date(2026, m-1, d, h, mi||0);
+
+function initialState() {
+  return {
+    now: D(8,20,18),
+    title:'昼休み集まれる日', group:'JPHacks2026ファン組',
+    deadline: D(8,22,12),
+    members:['りくと','けんじ','ゆうき','みなみ','そうた'],
+    host:'りくと', me:'りくと',            // デモでは幹事の視点で見せる
+    slot:'12:15 - 13:00',
+    candidates:[
+      {id:'c1',date:D(8,24,12,15)},{id:'c2',date:D(8,25,12,15)},{id:'c3',date:D(8,26,12,15)},
+      {id:'c4',date:D(8,27,12,15)},{id:'c5',date:D(8,28,12,15)}
+    ],
+    answers:{
+      'りくと':{c1:'no',c2:'yes',c3:'yes',c4:'maybe',c5:'no'},
+      'ゆうき':{c1:'maybe',c2:'no',c3:'yes',c4:'yes',c5:'yes',[NOTE_KEY]:'水曜なら13時まで大丈夫です'}
+    },
+    feed:[], sentReminders:[], confirmed:null, failed:false,
+    view:'cal', calY:2026, calM:8, selected:null, hostMenu:false,
+    unread:0, draft:null, joining:false, pendingDel:null, pendingClose:false,
+    undo:null, seq:6
+  };
+}
+let state = initialState();
+
+/* ================= データ層 ================= */
+let mode='demo', db=null, eventId=null, syncing=false;
+const newId = () => Math.random().toString(36).slice(2,6) + Math.random().toString(36).slice(2,6);
+
+function toRow() {
+  return { id:eventId, title:state.title, group_name:state.group, host:state.host, slot:state.slot,
+    deadline:state.deadline.toISOString(), members:state.members,
+    candidates:state.candidates.map(c=>({id:c.id,date:c.date.toISOString()})),
+    confirmed:state.confirmed, failed:state.failed,
+    feed:state.feed.slice(0,60).map(f=>({at:f.at.toISOString(),type:f.type,msg:f.msg})),
+    sent_reminders:state.sentReminders };
+}
+function fromRow(row, answerRows) {
+  state.title=row.title; state.group=row.group_name; state.host=row.host;
+  state.slot=row.slot||'12:15 - 13:00';
+  state.deadline=new Date(row.deadline);
+  state.members=row.members||[];
+  state.candidates=(row.candidates||[]).map(c=>({id:c.id,date:new Date(c.date)}));
+  state.confirmed=row.confirmed; state.failed=!!row.failed;
+  const prevLen = state.feed.length;
+  state.feed=(row.feed||[]).map(f=>({at:new Date(f.at),type:f.type,msg:f.msg}));
+  // 他の人の動きで増えた通知も未読に数える。数えないとバッジが機能しない
+  if (state.view!=='feed' && state.feed.length>prevLen) state.unread += state.feed.length-prevLen;
+  state.sentReminders=row.sent_reminders||[];
+  const next={};
+  (answerRows||[]).forEach(a=>{ next[a.member]=a.value||{}; });
+  state.answers=next;                       // 下書きは state.draft に分けてあるので、同期で消えない
+  if (state.me && !state.members.includes(state.me)) state.me='';
+}
+
+async function boot() {
+  if (!SUPABASE.url || !SUPABASE.key) { render(); return; }
+  try {
+    db = window.supabase.createClient(SUPABASE.url, SUPABASE.key);
+    mode='shared'; state.now=new Date();
+    eventId = new URLSearchParams(location.hash.slice(1)).get('e');
+    if (eventId) { if (!await pull()) await createEvent(); } else await createEvent();
+    setInterval(pull, 3000);
+    setInterval(()=>{ state.now=new Date(); renderStatus(); renderTopbar(); }, 30000);
+  } catch (e) {
+    console.error(e); mode='demo'; state=initialState();
+    toast('サーバーに繋がらなかったので、デモモードで起動しました。');
+  }
+  render();
+}
+/* 共有モードでは、あらかじめメンバーを登録しない。来た人が自分で名前を足す。 */
+async function createEvent() {
+  eventId = newId();
+  const now=new Date(), cands=[];
+  let d=new Date(now); d.setDate(d.getDate()+1);
+  while (cands.length<5) {
+    if (d.getDay()!==0 && d.getDay()!==6) { const x=new Date(d); x.setHours(12,15,0,0);
+      cands.push({id:'c'+(cands.length+1),date:x}); }
+    d.setDate(d.getDate()+1);
+  }
+  Object.assign(state,{ title:'日程調整', group:'', host:'', members:[], me:'', candidates:cands,
+    deadline:new Date(now.getTime()+48*3600000), answers:{}, feed:[], sentReminders:[],
+    confirmed:null, failed:false, calY:cands[0].date.getFullYear(), calM:cands[0].date.getMonth()+1 });
+  await db.from('events').insert(toRow());
+  location.hash='e='+eventId;
+}
+async function pull() {
+  if (mode!=='shared' || syncing) return false;
+  syncing=true;
+  try {
+    const {data:ev} = await db.from('events').select('*').eq('id',eventId).maybeSingle();
+    if (!ev) return false;
+    const {data:ans} = await db.from('answers').select('*').eq('event_id',eventId);
+    fromRow(ev, ans); state.now=new Date();
+    // 締切の判定は常駐サーバーではなく「誰かが画面を開いたとき」に走る。画面にもそう書いてある。
+    const key = () => JSON.stringify([state.confirmed,state.failed,state.feed.length,state.sentReminders.length]);
+    const before = key(); tick();
+    if (key()!==before) await persist();
+    render(); return true;
+  } catch (e) { console.error(e); return false; }
+  finally { syncing=false; }
+}
+async function persist() {
+  if (mode!=='shared') return;
+  try { await db.from('events').update(toRow()).eq('id',eventId); }
+  catch (e) { console.error(e); toast('保存に失敗しました。通信を確認してください。'); }
+}
+async function saveAnswer() {
+  if (mode!=='shared') return true;
+  try {
+    await db.from('answers').upsert({ event_id:eventId, member:state.me,
+      value:state.answers[state.me]||{}, updated_at:new Date().toISOString() });
+    return true;
+  } catch (e) { console.error(e); toast('回答の保存に失敗しました。もう一度押してください。'); return false; }
+}
+function copyLink() { copyText(inviteText(), '招待の文面をコピーしました。LINEに貼ってください。'); }
+
+/* ================= 便利関数 ================= */
+const WD=['日','月','火','水','木','金','土'];
+const pad = n => String(n).padStart(2,'0');
+const fmt  = d => `${d.getMonth()+1}月${d.getDate()}日(${WD[d.getDay()]}) ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const fmtD = d => `${d.getMonth()+1}月${d.getDate()}日(${WD[d.getDay()]})`;
+const fmtS = d => `${d.getMonth()+1}/${d.getDate()}(${WD[d.getDay()]})`;
+const esc  = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const sameDay=(a,b)=>a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate();
+
+const msLeft = () => state.deadline - state.now;
+const leftHours = () => Math.max(0, Math.round(msLeft()/3600000));
+// 残り20分を「あと0時間」と出すと、一番効かせたい最後の1時間で表示が死ぬ
+function leftText() {
+  const ms = msLeft();
+  if (ms <= 0) return '締切を過ぎています';
+  const min = Math.round(ms/60000);
+  if (min < 60) return `あと${min}分`;
+  if (min < 120) return `あと1時間${min-60}分`;
+  return `あと${Math.round(min/60)}時間`;
+}
+
+// 送信前の入力は state.draft に置き、集計や「回答済み」判定には一切混ぜない。
+// 混ぜると、自分にしか見えていない値でみんなの最有力が動いてしまう。
+const isDirty = () => !!state.draft;
+function myView(){ return state.draft ? state.draft : (state.answers[state.me]||{}); }
+function ensureDraft(){ if (!state.draft) state.draft = {...(state.answers[state.me]||{})}; return state.draft; }
+function hasAnswered(m) {
+  const a = state.answers[m];
+  return !!a && state.candidates.length>0 && state.candidates.every(c=>a[c.id]);
+}
+function filledCount(m){ const a=state.answers[m]||{}; return state.candidates.filter(c=>a[c.id]).length; }
+function unanswered(){ return state.members.filter(m=>!hasAnswered(m)); }
+function answered(){ return state.members.filter(m=>hasAnswered(m)); }
+function noteOf(m){ return (state.answers[m] && state.answers[m][NOTE_KEY]) || ''; }
+function candById(id){ return state.candidates.find(c=>c.id===id); }
+function sortedCands(){ return [...state.candidates].sort((a,b)=>a.date-b.date); }
+function isHost(){ return !state.host || state.me===state.host; }
+
+function scoreOf(cid) {
+  let s=0,yes=0,maybe=0,no=0;
+  for (const m of state.members) {
+    if (!state.answers[m]) continue;
+    const v=state.answers[m][cid];
+    if (v==='yes'){s+=CONFIG.scoreYes;yes++;} if (v==='maybe'){s+=CONFIG.scoreMaybe;maybe++;} if (v==='no'){s+=CONFIG.scoreNo;no++;}
+  }
+  return {score:s,yes,maybe,no};
+}
+function leader() {
+  let best=null;
+  for (const c of sortedCands()) { const r=scoreOf(c.id); if (!best||r.score>best.score) best={...r,cand:c}; }
+  return best;
+}
+// 同点が何日あるか（「なぜその日か」を画面で説明するため）
+function tieCount(score){ return sortedCands().filter(c=>scoreOf(c.id).score===score).length; }
+function forecast() {
+  if (!state.candidates.length || !state.members.length) return null;
+  const b=leader();
+  return b && b.score>0 ? b : null;      // 0点以下の日は「決まる日」ではない
+}
+/* 朱を薄めた色。半透明のまま塗ると、下にある罫線の色が透けて
+   意図より暗くなり文字が読めなくなる。先に混ぜて不透明な色にしてから塗る。 */
+function heat(a) {
+  const A=[176,66,31], S=[255,253,248];
+  const c=A.map((v,i)=>Math.round(v*a + S[i]*(1-a)));
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+function push(type,msg){ state.feed.unshift({at:new Date(state.now),type,msg}); state.unread++; }
+
+/* ================= 自動処理エンジン ================= */
+function tick() {
+  if (state.confirmed || state.failed) return;
+  if (!state.candidates.length || !state.members.length) return;
+  // 早期確定はデモモードだけ。共有モードは各自が後から参加するので「全員」を機械が判定できない
+  if (mode==='demo' && !unanswered().length) { finalize('全員の回答が揃ったため、締切前に確定。'); return; }
+  if (state.now >= state.deadline) { finalize('締切のため自動確定。', unanswered()); return; }
+  for (const h of CONFIG.remindHours) {
+    const at=new Date(state.deadline.getTime()-h*3600000);
+    if (state.now>=at && !state.sentReminders.includes(h)) {
+      state.sentReminders.push(h);
+      const t=unanswered();
+      // メールもLINEも送る機能は持っていない。持っていないものを「送りました」と書かない
+      if (t.length) push('miss', `締切まであと${h}時間。未回答は <b>${esc(t.join('・'))}</b>。`);
+    }
+  }
+}
+function finalize(reason, missList) {
+  const win=leader();
+  // カレンダーで取り消し線を引く基準（0点以下）と、決める基準を同じ式にしておく。
+  // 違う式にすると「無理と線を引いた日が確定する」という矛盾が起きる。
+  if (win.score<=0) {
+    state.failed=true;
+    push('none','どの候補日も0点以下でした（○より×が多い）。候補日を足して再調整してください。');
+    return false;
+  }
+  if (missList && missList.length) push('miss', `<b>${esc(missList.join('・'))}</b> は未回答のまま確定。`);
+  state.confirmed=win.cand.id;
+  state.calY=win.cand.date.getFullYear(); state.calM=win.cand.date.getMonth()+1;
+  push('fix', `<b>${fmtD(win.cand.date)}</b> に確定。${reason}${state.members.length?`（${state.members.length}人中${answered().length}人の回答）`:''}`);
+  return true;
+}
+function closeNow() {
+  if (state.confirmed||state.failed||!state.members.length||!state.candidates.length) return;
+  if (!state.pendingClose) { state.pendingClose=true; render(); return; }
+  state.pendingClose=false;
+  finalize('締切前に締め切り。', unanswered());
+  persist(); render();
+}
+function reopen() {
+  if (!needHost()) return;
+  state.confirmed=null; state.failed=false;
+  state.deadline=new Date(state.now.getTime()+24*3600000);
+  state.sentReminders=[]; state.selected=null; state.pendingClose=false;
+  push('reopen', `再調整を開始。新しい締切は <b>${fmt(state.deadline)}</b>。`);
+  persist(); render();
+}
+
+/* ================= 操作 ================= */
+function advance(hours) {
+  if (mode!=='demo') return;
+  for (let i=0;i<hours;i++){ state.now=new Date(state.now.getTime()+3600000); tick(); }
+  render();
+}
+function resetAll() {
+  if (mode!=='demo') return toast('共有モードでは初期化できません。');
+  state=initialState(); render();
+}
+function go(v) {
+  state.view=v; if (v==='feed') state.unread=0;
+  state.pendingDel=null; state.pendingClose=false;
+  render(); window.scrollTo({top:0,behavior:'instant'});
+}
+function inView(id){ const c=candById(id); return c && c.date.getFullYear()===state.calY && c.date.getMonth()+1===state.calM; }
+function shiftMonth(d) {
+  let m=state.calM+d,y=state.calY;
+  if (m>12){m=1;y++;} if (m<1){m=12;y--;}
+  state.calM=m; state.calY=y;
+  if (state.selected && !inView(state.selected)) state.selected=null;   // 別の月の詳細が残らないように
+  render();
+}
+function jumpMonth(y,m){ state.calY=y; state.calM=m;
+  if (state.selected && !inView(state.selected)) state.selected=null; render(); }
+function selectCand(id){ state.selected = state.selected===id?null:id; render(); }
+function toggleHostMenu(){ state.hostMenu=!state.hostMenu; state.pendingDel=null; render(); }
+
+function needHost(){ if (isHost()) return true; toast(`変更できるのは ${state.host} さんだけです。`); return false; }
+function addCandidate(y,m,d) {
+  if (!needHost()) return;
+  if (state.confirmed) return toast('確定後は「再調整する」を押してから候補日を変更してください。');
+  const [hh,mm] = state.slot.split('-')[0].trim().split(':').map(Number);
+  const id='c'+(state.seq++);
+  const date=new Date(y,m-1,d,hh||12,mm||0);
+  const before=answered();
+  state.candidates.push({id,date});
+  const back=before.filter(x=>!hasAnswered(x));
+  let added=1;
+  if (back.length) { state.sentReminders=[]; added=2;
+    push('cand', `候補日 <b>${fmtD(date)}</b> を追加。<b>${esc(back.join('・'))}</b> の回答は未記入に戻りました。`); }
+  else push('cand', `候補日 <b>${fmtD(date)}</b> を追加。`);
+  // 誤タップで全員の回答が未記入に戻る操作なので、取り消せるようにしておく
+  state.undo = { id, n:added, at:Date.now(),
+    label:`${fmtD(date)} を候補日に追加しました。${back.length?`${back.length}人の回答が未記入に戻っています。`:''}` };
+  state.selected=id; persist(); render();
+}
+function undoAdd() {
+  if (!state.undo) return;
+  const u=state.undo; state.undo=null;
+  state.feed.splice(0,u.n);                 // 取り消したのに記録だけ残ると、それが新しい嘘になる
+  state.unread=Math.max(0,state.unread-u.n);
+  removeCandidate(u.id);
+}
+function dismissUndo(){ state.undo=null; render(); }
+function removeCandidate(id) {
+  if (!needHost()) return;
+  if (state.confirmed) return;
+  state.candidates=state.candidates.filter(c=>c.id!==id);
+  for (const m in state.answers) delete state.answers[m][id];
+  if (state.selected===id) state.selected=null;
+  persist(); render();
+}
+function setAnswer(cid,val){ if (!state.me) return; ensureDraft()[cid]=val; render(); }
+function fillAll(val){ if (!state.me) return; const d=ensureDraft(); state.candidates.forEach(c=>d[c.id]=val); render(); }
+function setNote(v){ if (!state.me) return; ensureDraft()[NOTE_KEY]=v.slice(0,100); }
+function discardDraft(){ state.draft=null; }
+async function submitAnswer() {
+  const me=state.me;
+  if (!me) return toast('先に名前を選ぶか、追加してください。');
+  const a=myView();
+  const missing=state.candidates.filter(c=>!a[c.id]);
+  if (missing.length) {
+    toast(`まだ ${missing.length}件、○ △ × が入っていません。`);
+    const el=document.querySelector('.arow.todo'); if (el) el.scrollIntoView({block:'center'});
+    return;
+  }
+  state.answers[me]={...a};
+  if (!await saveAnswer()) return;           // 保存できていないのに「回答済み」にしない
+  state.draft=null;
+  push('answer', `<b>${esc(me)}</b> が回答。（未回答 残り${unanswered().length}人）`);
+  tick(); await persist(); go('board');
+}
+function changeMe(v) {
+  // 未送信の入力を別人に持ち越すと、その人が回答したことになってしまう
+  if (isDirty() && state.me!==v) { const old=state.me; discardDraft(); toast(`${old} さんの未送信の入力は破棄しました。`); }
+  state.me=v; state.joining=false; render();
+}
+function startJoin(){ if (isDirty()) discardDraft(); state.joining=true; render();
+  const el=document.getElementById('joinName'); if (el) el.focus(); }
+function cancelJoin(){ state.joining=false; render(); }
+async function joinAsMe() {
+  const el=document.getElementById('joinName');
+  const n=(el?el.value:'').trim();
+  if (!n) return toast('名前を入れてください。');
+  if (n.length>20) return toast('名前が長すぎます（20文字まで）。');
+  const dup=state.members.find(m=>m===n);
+  if (dup) { state.me=dup; state.joining=false; render();
+    return toast(`「${n}」はすでに参加しています。その名前で回答します。`); }
+  state.members.push(n);
+  if (!state.host) state.host=n;
+  state.me=n; state.joining=false; state.sentReminders=[]; state.draft=null;
+  await persist(); render();
+}
+function setTitle(v){ state.title=v; }
+function setGroup(v){ state.group=v; }
+function setDeadline(v){ if (!v||!needHost()) return; state.deadline=new Date(v); state.sentReminders=[]; persist(); render(); }
+function setSlot(which,v) {
+  if (!v) return;
+  const p=state.slot.split('-').map(s=>s.trim());
+  state.slot = which==='s' ? `${v} - ${p[1]||'13:00'}` : `${p[0]||'12:15'} - ${v}`;
+  const [hh,mm]=state.slot.split('-')[0].trim().split(':').map(Number);
+  state.candidates.forEach(c=>c.date.setHours(hh,mm,0,0));   // 候補日の時刻も揃える
+  persist(); render();
+}
+// 名前をそのまま onclick に埋めるとアポストロフィなどで壊れるので、位置で指定する
+function removeMemberAt(i) {
+  const n=state.members[i]; if (n===undefined) return;
+  if (state.pendingDel!==n) { state.pendingDel=n; render(); return; }
+  state.members=state.members.filter(m=>m!==n);
+  delete state.answers[n];
+  if (state.me===n) state.me='';
+  state.pendingDel=null; persist(); render();
+}
+
+function downloadIcs() {
+  const c=candById(state.confirmed); if (!c) return;
+  const [sH,sM]=state.slot.split('-')[0].trim().split(':').map(Number);
+  const [eH,eM]=state.slot.split('-')[1].trim().split(':').map(Number);
+  const stamp=d=>`${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`;
+  const s=new Date(c.date); s.setHours(sH,sM,0,0);
+  const e=new Date(c.date); e.setHours(eH,eM,0,0);
+  const ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//kimaru//JP','CALSCALE:GREGORIAN','BEGIN:VEVENT',
+    `UID:kimaru-${c.id}-${eventId||'demo'}@local`,`DTSTAMP:${stamp(new Date())}`,
+    `DTSTART:${stamp(s)}`,`DTEND:${stamp(e)}`,`SUMMARY:${state.title}`,'DESCRIPTION:キマるで確定',
+    'END:VEVENT','END:VCALENDAR'].join('\r\n');
+  const url=URL.createObjectURL(new Blob([ics],{type:'text/calendar;charset=utf-8'}));
+  const a=document.createElement('a');
+  a.href=url; a.download='kimaru.ics'; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  toast('カレンダーファイル（.ics）を書き出しました。');
+}
+
+let notice='';
+function toast(m){ notice=m; renderToast(); clearTimeout(toast._t); toast._t=setTimeout(()=>{notice='';renderToast();},4000); }
+function copyText(text,done) {
+  const ta=document.createElement('textarea');
+  ta.value=text; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  try{document.execCommand('copy');}catch(e){}
+  try{navigator.clipboard.writeText(text);}catch(e){}
+  ta.remove(); toast(done);
+}
+function inviteText() {
+  const cs=sortedCands();
+  return `【${state.title}】日程を決めます。\n`
+    + (cs.length?`候補：${fmtS(cs[0].date)}〜${fmtS(cs[cs.length-1].date)} の${cs.length}日／${state.slot}\n`:'')
+    + `締切：${fmt(state.deadline)}（過ぎると自動で決まります）\n${location.href}`;
+}
+function nudgeText() {
+  const miss=unanswered().map(m=>{ const f=filledCount(m);
+    return f>0 ? `${m}（あと${state.candidates.length-f}件）` : m; });
+  return `【${state.title}】まだ ${miss.join('・')} の回答が入っていません。\n締切は ${fmt(state.deadline)}。\n過ぎると自動で決まってしまうので、それまでにお願いします。\n${location.href}`;
+}
+function decidedText() {
+  const c=candById(state.confirmed); if (!c) return '';
+  const miss=unanswered();
+  return `【${state.title}】${fmtD(c.date)} ${state.slot} に決まりました。\n`
+    + (miss.length?`※${miss.join('・')} は未回答のまま確定しています。\n`:'') + location.href;
+}
+
+/* ================= 描画 ================= */
+/* 共有モードは3秒ごとに再描画が走る。入力値とフォーカスを退避しないと、
+   名前を打っている途中で消える。 */
+function renderBody(html) {
+  const a=document.activeElement;
+  const keep = a && (a.tagName==='INPUT'||a.tagName==='TEXTAREA') && a.id
+    ? {id:a.id,v:a.value,s:a.selectionStart,e:a.selectionEnd} : null;
+  document.getElementById('view').innerHTML=html;
+  if (keep) { const n=document.getElementById(keep.id);
+    if (n) { n.value=keep.v; n.focus(); try{n.setSelectionRange(keep.s,keep.e);}catch(e){} } }
+}
+function renderToast() {
+  const box=document.getElementById('status');
+  const t=box.querySelector('.toast'); if (t) t.remove();
+  if (notice) box.insertAdjacentHTML('afterbegin',`<div class="toast">${esc(notice)}</div>`);
+}
+function render() {
+  renderTopbar();
+  const dot=document.getElementById('feedDot');
+  dot.style.display = state.unread>0?'inline-block':'none';
+  dot.textContent=state.unread;
+  ['cal','board','answer','feed'].forEach(v=>
+    document.getElementById('tab-'+v).classList.toggle('active', state.view===v));
+  renderStatus();
+  let h='';
+  if (state.view==='cal') h=viewCalendar();
+  if (state.view==='board') h=viewBoard();
+  if (state.view==='answer') h=viewAnswer();
+  if (state.view==='feed') h=viewFeed();
+  renderBody(h);
+  document.querySelectorAll('.scroll').forEach(el=>{
+    if (el.scrollWidth>el.clientWidth+2) {
+      const t=document.createElement('div');
+      t.className='hint'; t.textContent='← 横にスクロールできます →';
+      el.after(t);
+    }
+  });
+}
+function renderTopbar() {
+  document.getElementById('topbar').innerHTML = mode==='shared'
+    ? `<span class="tag">共有中</span><span class="now">${
+         state.confirmed ? `${fmtD(candById(state.confirmed).date)} に確定`
+         : state.failed ? '未確定' : `締切まで ${leftText().replace('あと','')}`}</span><span class="sp"></span>
+       <button onclick="copyLink()">招待の文面をコピー</button>`
+    : `<span class="tag">デモ・仮想時計</span><span class="now">${fmt(state.now)}</span><span class="sp"></span>
+       <button class="opt" onclick="advance(1)">＋1時間</button><button class="opt" onclick="advance(6)">＋6時間</button>
+       <button onclick="advance(24)">＋1日</button><button onclick="resetAll()">最初から</button>`;
+  document.getElementById('footnote').innerHTML = mode==='shared'
+    ? '送信機能はありません（催促と決定の文面だけ作ります）。決めるのは日ひとつ。回答は3秒ごとに同期。'
+    : 'デモモード。データはブラウザの中だけ。再読み込みで最初に戻ります。';
+}
+
+/* 状況バー：このツールの主張が常に見えている場所。
+   結論が出たあとは結果表示と役割が重なるので、出さない。 */
+function renderStatus() {
+  const box=document.getElementById('status');
+  const pitch=document.getElementById('pitch');
+  // 確定・不成立のときは、詳しい表示（結果パネル）と役割が重なるので細い帯だけにする。
+  // ただし「今どうなっているか」はどのタブでも見えている必要がある。
+  if (state.confirmed) {
+    const c=candById(state.confirmed);
+    pitch.textContent='';
+    box.innerHTML=`<div class="fixbar"><span class="k">確定</span>
+      <span class="d">${fmtD(c.date)}</span><span class="t">${esc(state.slot)}</span><span class="sp"></span>
+      ${state.view!=='board'?`<button class="b sm quiet" onclick="go('board')">結果を見る</button>`:''}</div>`+undoBar();
+    renderToast(); return;
+  }
+  if (state.failed) {
+    pitch.textContent='';
+    box.innerHTML=`<div class="fixbar" style="border-top-color:var(--off)">
+      <span class="k" style="color:var(--off)">未確定</span>
+      <span class="d">決まりませんでした</span><span class="sp"></span>
+      ${state.view!=='cal'?`<button class="b sm quiet" onclick="go('cal')">候補日を足す</button>`:''}</div>`+undoBar();
+    renderToast(); return;
+  }
+  pitch.textContent = hasAnswered(state.me)
+    ? '' : '回答が揃わなくても、締切が来たら自動でこの日に決まります。催促する人が要りません。';
+
+  let cls='status', lead, head, sub='', act='';
+  const f=forecast(), lh=leftHours();
+  const dlNote = `<span class="np">締切 ${fmt(state.deadline)}</span><span class="np"><b>${leftText()}</b>・過ぎたら自動で決まります</span>`;
+
+  if (!state.members.length) {
+    lead='まだ誰も参加していません'; head='締切を過ぎると、自動で日が決まります';
+    sub=dlNote; act=`<button class="b sm" onclick="go('answer')">名前を入れて始める</button>`;
+  } else if (!state.me) {
+    lead='あなたは誰ですか'; head='名前を選んでください';
+    sub=dlNote; act=`<button class="b sm" onclick="go('answer')">名前を選ぶ</button>`;
+  } else if (isDirty()) {
+    lead=`${esc(state.me)} さん`; head='回答がまだ送信されていません';
+    sub='<span class="np">このままだと保存されません</span>';
+    act=`<button class="b sm" onclick="submitAnswer()">この内容で送信する</button>`;
+  } else if (isHost() && state.members.length<=1) {
+    lead='つぎにやること'; head='このURLをグループに送る';
+    sub=dlNote; act=`<button class="b sm" onclick="copyLink()">招待の文面をコピー</button>`;
+  } else if (!hasAnswered(state.me)) {
+    const fl=filledCount(state.me), rest=state.candidates.length-fl;
+    lead=`${esc(state.me)} さん`;
+    head = fl>0 ? `あと${rest}件で回答が終わります` : 'まだ回答していません';
+    sub = (f?`<span class="np">このままだと <b>${fmtD(f.cand.date)}</b> に決まります</span>`:'')
+        + `<span class="np"><b>${leftText()}</b></span>`;
+    act=`<button class="b sm" onclick="go('answer')">○△×で回答する</button>`;
+  } else {
+    lead='このままだと';
+    head = f ? `<b>${fmtD(f.cand.date)}</b> に決まります` : 'まだ決まる日がありません';
+    sub=`<span class="np"><b>${leftText()}</b></span><span class="np">${state.members.length}人中${answered().length}人が回答済み</span>`;
+    act=`<button class="b sm quiet" onclick="go('answer')">回答を直す</button>`;
+  }
+  if (lh<=6 && state.members.length) cls+=' crit';
+  else if (lh<=24 && state.members.length) cls+=' warn';
+  if (state.view==='answer') act='';       // 回答タブでは同じボタンが二重になる
+
+  box.innerHTML = `<div class="${cls}">
+      <div class="main"><div class="lead">${lead}</div><div class="head">${head}</div>
+      ${sub?`<div class="sub">${sub}</div>`:''}</div>
+      ${act?`<div class="act">${act}</div>`:''}
+    </div>` + undoBar();
+  renderToast();
+}
+function undoBar() {
+  if (!state.undo) return '';
+  return `<div class="undo"><span>${esc(state.undo.label)}</span>
+    <span class="brow"><button class="b sm danger" onclick="undoAdd()">取り消す</button>
+    <button class="b sm quiet" onclick="dismissUndo()">閉じる</button></span></div>`;
+}
+
+function resultBanner() {
+  if (state.failed) {
+    return `<section><div class="undecided">
+      <div class="k">未確定</div><div class="day">○も△も付いた日がありません</div>
+      <p class="note tight">候補日を足してから、締切を延ばしてください。締切だけ延ばしても同じ結果になります。</p>
+      <div class="brow" style="margin-top:16px">
+        <button class="b" onclick="go('cal')">候補日を足す</button>
+        <button class="b quiet" onclick="reopen()">締切だけ24時間延ばす</button></div>
+    </div></section>`;
+  }
+  if (!state.confirmed) return '';
+  const c=candById(state.confirmed), r=scoreOf(c.id), miss=unanswered();
+  return `<section><div class="decided">
+    <div class="k">確定</div><div class="day">${fmtD(c.date)}</div>
+    <div class="time">${esc(state.slot)}</div>
+    ${(()=>{const s=state.members.filter(x=>noteOf(x)&&['yes','maybe'].includes((state.answers[x]||{})[c.id]));
+      return s.length?`<p class="note tight">時間の希望　${s.map(x=>`<b>${esc(x)}</b>「${esc(noteOf(x))}」`).join('　')}</p>`:'';})()}
+    <div class="meta">${state.members.length}人中${answered().length}人の回答で決定　○${r.yes}　△${r.maybe}　×${r.no}</div>
+    ${miss.length?`<p class="note tight"><b>${esc(miss.join('・'))}</b> は未回答のまま確定しました。都合が悪ければ再調整してください。</p>`:''}
+    <div class="brow" style="margin-top:18px">
+      <button class="b line" onclick="downloadIcs()">カレンダーに追加</button>
+      <button class="b line" onclick="copyText(decidedText(),'決定の連絡文をコピーしました。')">決定を知らせる</button>
+      <button class="b quiet" onclick="reopen()">再調整する（締切を24時間延長）</button>
+    </div></div></section>`;
+}
+
+/* ---- ① カレンダー ---- */
+function viewCalendar() {
+  const y=state.calY, m=state.calM;
+  const days=new Date(y,m,0).getDate(), lead0=new Date(y,m-1,1).getDay();
+  // 濃さも順位も「点数」で決める。片方を○の数にすると、面と線が別の日を指してしまう
+  const hi=Math.max(1,...state.candidates.map(c=>scoreOf(c.id).score));
+  const f=forecast(), leadId=state.confirmed?null:(f?f.cand.id:null);
+
+  const cells=[];
+  for (let i=0;i<lead0;i++) cells.push(null);
+  for (let d=1;d<=days;d++) cells.push(d);
+  while (cells.length%7) cells.push(null);
+  const weeks=[];
+  for (let i=0;i<cells.length;i+=7) {
+    const w=cells.slice(i,i+7);
+    const alive=w.some(d=>d!==null && (new Date(y,m-1,d,23,59)>=state.now
+      || state.candidates.some(c=>sameDay(c.date,new Date(y,m-1,d)))));
+    if (alive||weeks.length) weeks.push(w);      // 過去しかない先頭の週は描かない
+  }
+
+  let h=resultBanner()+`<section>
+    <div class="calhead"><button onclick="shiftMonth(-1)" aria-label="前の月">‹</button>
+      <div class="m">${y}年 ${m}月</div>
+      <button onclick="shiftMonth(1)" aria-label="次の月">›</button></div>
+    <div class="grid">${WD.map(w=>`<div class="wd">${w}</div>`).join('')}`;
+
+  for (const w of weeks) for (const d of w) {
+    if (d===null) { h+=`<div class="cell blank"></div>`; continue; }
+    const date=new Date(y,m-1,d,23,59);
+    const cand=state.candidates.find(c=>sameDay(c.date,date));
+    const isToday=sameDay(state.now,date), past=date<state.now&&!isToday;
+    const cls=['cell']; let style='',inner=`<span class="d">${d}</span>`,click='',label='';
+    if (cand) {
+      const r=scoreOf(cand.id), fixed=state.confirmed===cand.id;
+      const votes=r.yes+r.maybe+r.no;
+      cls.push('cand');
+      if (fixed) cls.push('fixed');
+      else if (votes===0) cls.push('neutral');    // まだ誰も答えていない日を「無理」に見せない
+      else if (r.score<=0) cls.push('dead');      // 0点以下は選ばれない
+      else style=`background:${heat(0.10+(r.score/hi)*0.52)};`;
+      if (!fixed && cand.id===leadId) cls.push('lead');
+      if (state.selected===cand.id) cls.push('sel');
+      // 色の濃さ・順位・ここに出る数字を、すべて「点数」で揃える
+      inner += fixed ? `<span class="y">確定</span>`
+        : `<span class="y">${votes===0?'—':`${r.score}点`}</span>${cand.id===leadId?'<span class="lk">最有力</span>':''}`;
+      click=`onclick="selectCand('${cand.id}')"`;
+      label=`aria-label="${d}日 候補日 ${r.score}点 ○${r.yes}人 ×${r.no}人${cand.id===leadId?' 最有力':''}"`;
+    } else if (past) cls.push('past');
+    else if (!state.confirmed) { cls.push('addable'); click=`onclick="addCandidate(${y},${m},${d})"`;
+      label=`aria-label="${d}日を候補日に追加"`; }
+    if (isToday) cls.push('today');
+    h+=`<button class="${cls.join(' ')}" style="${style}" ${click} ${label} ${click?'':'disabled'}>${inner}</button>`;
+  }
+  const anyDead=state.candidates.some(c=>{const r=scoreOf(c.id); return (r.yes+r.maybe+r.no)>0 && r.score<=0;});
+  h+=`</div><div class="legend">
+      ${state.confirmed ? `<span><i style="background:var(--accent)"></i>確定日</span>`
+        : `<span><i style="background:${heat(0.62)}"></i>点数が高い</span>
+           <span><i style="background:${heat(0.20)}"></i>点数が低い</span>`}
+      ${anyDead?'<span>取り消し線＝0点以下・選ばれません</span>':''}
+      ${state.confirmed||!isHost()?'':'<span>空いている日を押すと候補日になります</span>'}
+    </div>`;
+
+  const others=state.candidates.filter(c=>c.date.getFullYear()!==y||c.date.getMonth()+1!==m);
+  if (others.length) {
+    const g={};
+    others.forEach(c=>{const k=`${c.date.getFullYear()}-${c.date.getMonth()+1}`; g[k]=(g[k]||0)+1;});
+    h+=`<div class="brow" style="margin-top:14px"><span class="note">他の月の候補日</span>
+      ${Object.entries(g).sort().map(([k,n])=>{const [gy,gm]=k.split('-');
+        return `<button class="b sm quiet" onclick="jumpMonth(${gy},${gm})">${gy}年${gm}月に${n}日</button>`;}).join('')}</div>`;
+  }
+
+  if (state.selected && candById(state.selected)) {
+    const c=candById(state.selected), r=scoreOf(c.id);
+    const by=v=>state.members.filter(x=>state.answers[x]&&state.answers[x][c.id]===v);
+    const none=state.members.filter(x=>!state.answers[x]||!state.answers[x][c.id]);
+    const row=(cl,mk,list)=>list.length?`<div class="row"><span class="m ${cl}">${mk}</span><span>${esc(list.join('、'))}</span></div>`:'';
+    const says=state.members.filter(x=>noteOf(x)&&state.answers[x]&&['yes','maybe'].includes(state.answers[x][c.id]));
+    const tie=tieCount(r.score);
+    h+=`<div class="detail"><h3>${fmtD(c.date)}　${esc(state.slot)}</h3>
+      ${row('y','○',by('yes'))}${row('mb','△',by('maybe'))}${row('n','×',by('no'))}${row('u','—',none)}
+      ${says.length?`<p class="note tight">${says.map(x=>`<b>${esc(x)}</b>：${esc(noteOf(x))}`).join('<br>')}</p>`:''}
+      ${state.members.length?'':'<p class="note">まだ誰も参加していません。</p>'}
+      <div class="brow" style="margin-top:14px">
+        <span class="note">${r.score}点${c.id===(forecast()?forecast().cand.id:null)?`・最有力${tie>1?`（同点${tie}日のうち最も早い日）`:''}`:''}</span>
+        ${state.confirmed?'':`<button class="b sm quiet" onclick="removeCandidate('${c.id}')">候補から外す</button>`}
+      </div></div>`;
+  }
+  h+=`</section>`;
+
+  h+=`<section><div class="brow" style="justify-content:space-between;align-items:flex-start">
+      <div><div class="slabel" style="margin:0">イベント</div>
+        <div class="mj" style="font-size:19px;letter-spacing:.04em">${esc(state.title||'（名前なし）')}</div>
+        <p class="note">${state.group?esc(state.group)+'　':''}候補${state.candidates.length}日　${esc(state.slot)}　${state.members.length}人</p></div>
+      ${isHost()?`<button class="b sm quiet" onclick="toggleHostMenu()">${state.hostMenu?'閉じる':'設定'}</button>`
+        :`<span class="note">締切と候補日を<br>変えられるのは<br>${esc(state.host)} さんだけ</span>`}</div>`;
+  if (state.hostMenu && isHost()) {
+    const dl=state.deadline;
+    const v=`${dl.getFullYear()}-${pad(dl.getMonth()+1)}-${pad(dl.getDate())}T${pad(dl.getHours())}:${pad(dl.getMinutes())}`;
+    const p=state.slot.split('-').map(s=>s.trim());
+    h+=`<div style="margin-top:16px;border-top:1px solid var(--hair);padding-top:8px">
+      <div class="field"><label>イベント名</label>
+        <input type="text" id="fTitle" value="${esc(state.title)}" oninput="setTitle(this.value)" onchange="persist();render()" style="flex:1;min-width:170px"></div>
+      <div class="field"><label>グループ名</label>
+        <input type="text" id="fGroup" value="${esc(state.group||'')}" placeholder="任意" oninput="setGroup(this.value)" onchange="persist();render()" style="flex:1;min-width:170px"></div>
+      <div class="field"><label>時間帯</label>
+        <span class="timepair">
+          <input type="time" id="fS" value="${esc(p[0]||'12:15')}" onchange="setSlot('s',this.value)" aria-label="開始時刻">
+          <span class="note">〜</span>
+          <input type="time" id="fE" value="${esc(p[1]||'13:00')}" onchange="setSlot('e',this.value)" aria-label="終了時刻">
+        </span></div>
+      <div class="field"><label>回答締切</label>
+        <input type="datetime-local" id="fDl" value="${v}" onchange="setDeadline(this.value)"></div>
+      <div class="field" style="align-items:flex-start"><label>参加者</label>
+        <div style="flex:1;min-width:200px">
+          ${state.members.length?`<div class="people">${state.members.map((x,i)=>`
+            <span class="who">${esc(x)}<button class="x" onclick="removeMemberAt(${i})" aria-label="${esc(x)}を外す">${state.pendingDel===x?'本当に外す?':'×'}</button></span>`).join('')}</div>`
+            :`<p class="note" style="margin:0">まだ誰もいません。「回答」タブから各自が名前を追加します。</p>`}
+        </div></div>
+      <div class="field"><label>共有</label>
+        <button class="b sm quiet" onclick="copyText(location.href,'URLをコピーしました。')">URLだけコピー</button></div>
+      <p class="note" style="margin-top:8px">決めるのは日ひとつ。同じ日に昼と夜の2案は出せません。時間の希望は回答の「ひとこと」に書いてもらってください。</p>
+    </div>`;
+  }
+  return h+`</section>`;
+}
+
+/* ---- ② 集計 ---- */
+function viewBoard() {
+  const miss=unanswered(), done=answered();
+  const pct=state.members.length?Math.round(done.length/state.members.length*100):0;
+  const cands=sortedCands();
+  let h=resultBanner();
+
+  // みんなが見るのは表。幹事しか使わない招待文面より先に置く
+  if (cands.length) {
+    const sym={yes:['○','y'],maybe:['△','mb'],no:['×','n']};
+    const f=forecast();
+    const winId=state.confirmed||(state.failed?null:(f?f.cand.id:null));
+    const cc=c=>c.id===winId?'hit':'';
+    const tie=winId?tieCount(scoreOf(winId).score):0;
+    h+=`<section><div class="slabel">みんなの回答</div>
+      <div class="scroll"><table class="mx"><thead><tr><th>　</th>
+        ${cands.map(c=>`<th class="${cc(c)}">${fmtS(c.date)}${c.id===winId?`<span class="pick">${state.confirmed?'確定':'最有力'}</span>`:''}</th>`).join('')}
+      </tr></thead><tbody>
+        ${state.members.map(x=>`<tr><td>${esc(x)}</td>${cands.map(c=>{
+          const v=state.answers[x]&&state.answers[x][c.id];
+          const [s,k]=sym[v]||['—','u'];
+          return `<td class="c ${k} ${cc(c)}">${s}</td>`;}).join('')}</tr>`).join('')}
+        ${state.members.length?'':`<tr><td colspan="${cands.length+1}" style="color:var(--muted);font-size:13px">まだ誰も参加していません</td></tr>`}
+      </tbody><tfoot>
+        <tr><td>点数</td>${cands.map(c=>{const s=scoreOf(c.id).score;
+          return `<td class="c ${cc(c)}" style="${c.id===winId?'color:var(--accent);font-weight:700':''}">${s}</td>`;}).join('')}</tr>
+      </tfoot></table></div>
+      <p class="note tight">○＝＋2、△＝＋1、×＝−3。点数が一番高い日に決まります（同点なら早い日${tie>1?`。いまは同点${tie}日`:''}）。0点以下の日は選びません。「—」は未回答。</p>
+    </section>`;
+  } else {
+    h+=`<section><p class="empty">候補日がありません。カレンダーで日付を押して追加してください。</p></section>`;
+  }
+
+  h+=`<section><div class="slabel">回答状況</div>`;
+  if (!state.members.length) {
+    h+=`<p class="note">まだ誰も参加していません。「回答」タブから名前を追加してください。</p></section>`;
+  } else {
+    h+=`<div class="bar"><i style="width:${pct}%"></i></div>
+      <p class="note" style="margin-bottom:12px">${state.members.length}人中 ${done.length}人が回答済み</p>
+      <div class="people">${done.map(x=>`<span class="who done">${esc(x)}</span>`).join('')}
+        ${miss.map(x=>{const fl=filledCount(x);
+          return `<span class="who yet">${esc(x)}${fl?`（あと${cands.length-fl}件）`:''}</span>`;}).join('')}</div>`;
+    const says=state.members.filter(x=>noteOf(x));
+    if (says.length) {
+      h+=`<div class="slabel" style="margin:22px 0 8px">ひとこと</div>
+        <div class="saylist">${says.map(x=>`<b>${esc(x)}</b>　${esc(noteOf(x))}`).join('<br>')}</div>`;
+    }
+    if (miss.length && !state.confirmed) {
+      h+=`<details class="inv"><summary>未回答の人に送る文面をつくる</summary>
+        <div class="quote"><div class="txt">${esc(nudgeText())}</div>
+          <div class="r"><span class="note">送信機能はありません。文面だけ作ります。</span>
+            <button class="b sm line" onclick="copyText(nudgeText(),'コピーしました。LINEに貼ってください。')">コピー</button></div></div></details>`;
+    }
+    h+=`</section>`;
+  }
+
+  h+=`<section><div class="slabel">回答締切</div>
+    <div class="dl"><span class="big">${fmt(state.deadline)}</span>
+      ${state.confirmed?`<span class="left">確定済み</span>`
+        :state.failed?`<span class="left urgent">締切超過・未確定</span>`
+        :`<span class="left ${leftHours()<=24?'urgent':''}">${leftText()}</span>`}</div>
+    ${state.confirmed||state.failed?'':`<p class="note tight">自動確定は、締切を過ぎたあと最初に誰かがこのページを開いた時。常駐サーバーなし。</p>`}
+    ${state.confirmed||state.failed||!state.members.length||!cands.length?'':
+      (isHost()
+        ? `<div class="brow" style="margin-top:16px">
+            <button class="b ${state.pendingClose?'danger':'line'}" onclick="closeNow()">
+              ${state.pendingClose?`本当に締め切る？${miss.length?`（未回答${miss.length}人ぶんは反映されません）`:''}`:'いま締め切って決める'}</button>
+            ${state.pendingClose?`<button class="b sm quiet" onclick="state.pendingClose=false;render()">やめる</button>`:''}
+          </div>`
+        : `<p class="note tight">締め切れるのは ${esc(state.host)} さんだけです。</p>`)}
+  </section>`;
+  return h;
+}
+
+/* ---- ③ 回答 ---- */
+function viewAnswer() {
+  if (state.confirmed) {
+    const c=candById(state.confirmed);
+    return `<section><div class="slabel">回答は締め切られました</div>
+      <p class="note">この日程は <b>${fmtD(c.date)} ${esc(state.slot)}</b> に確定しています。</p>
+      <div class="brow" style="margin-top:16px"><button class="b line" onclick="go('board')">結果を見る</button>
+        ${isHost()?`<button class="b quiet" onclick="reopen()">再調整する</button>`:''}</div></section>`;
+  }
+  const cands=sortedCands();
+  if (!cands.length) return `<section><p class="empty">候補日がありません。<br>カレンダーで日付を押して追加してください。</p></section>`;
+
+  let h=`<section><div class="slabel">あなたは誰ですか</div>`;
+  if (state.joining || !state.members.length) {
+    h+=`<div class="brow">
+      <input type="text" id="joinName" placeholder="名前を入力" maxlength="20" style="flex:1;min-width:150px"
+             onkeydown="if(event.key==='Enter')joinAsMe()">
+      <button class="b" onclick="joinAsMe()">参加する</button>
+      ${state.members.length?`<button class="b sm quiet" onclick="cancelJoin()">やめる</button>`:''}</div>
+      ${state.members.length?`<p class="note tight">参加中：${state.members.map(esc).join('、')}</p>`
+        :`<p class="note tight">最初の1人です。名前を入れると参加できます。</p>`}`;
+  } else {
+    h+=`<div class="brow">
+      <select onchange="changeMe(this.value)" aria-label="あなたの名前">
+        <option value="" ${!state.me?'selected':''}>選んでください</option>
+        ${state.members.map(x=>`<option ${x===state.me?'selected':''}>${esc(x)}</option>`).join('')}
+      </select>
+      <button class="b sm quiet" onclick="startJoin()">名前がない人はこちら</button>
+      ${state.me?`<span class="note">${isDirty()?'未送信':hasAnswered(state.me)?'回答済み・書き直せます':'未回答'}</span>`:''}
+    </div>`;
+  }
+  h+=`</section>`;
+  if (!state.me) return h;
+
+  const mine=myView();
+  const todo=cands.filter(c=>!mine[c.id]).length;
+  const partial = todo>0 && todo<cands.length;
+  h+=`<section class="answers">
+    <div class="slabel">${esc(state.title)}　${esc(state.slot)}　／　締切 ${fmt(state.deadline)}</div>
+    <div class="quick"><span class="note">まとめて</span>
+      <button onclick="fillAll('yes')">全部 ○</button>
+      <button onclick="fillAll('maybe')">全部 △</button>
+      <button onclick="fillAll('no')">全部 ×</button></div>
+    <p class="note" style="margin-bottom:8px">×は−3点。1人でも×が付いた日はほぼ落ちます。行けなくはないなら △ を。</p>
+    ${partial?`<p class="note" style="color:var(--ink);font-weight:700">未記入が ${todo}件あります。</p>`:''}`;
+  for (const c of cands) {
+    const v=mine[c.id];
+    h+=`<div class="arow ${!v&&partial?'todo':''}">
+      <div class="lab">${fmtD(c.date)}</div>
+      <div class="opts">
+        <button data-v="yes"   class="${v==='yes'?'on':''}"   aria-label="${fmtD(c.date)} 参加できる"   onclick="setAnswer('${c.id}','yes')">○</button>
+        <button data-v="maybe" class="${v==='maybe'?'on':''}" aria-label="${fmtD(c.date)} たぶん行ける" onclick="setAnswer('${c.id}','maybe')">△</button>
+        <button data-v="no"    class="${v==='no'?'on':''}"    aria-label="${fmtD(c.date)} 参加できない" onclick="setAnswer('${c.id}','no')">×</button>
+      </div></div>`;
+  }
+  h+=`<div style="margin-top:18px">
+      <label for="noteBox" class="slabel" style="display:block;margin-bottom:8px">ひとこと（任意・100字まで）</label>
+      <textarea class="cm" id="noteBox" maxlength="100" placeholder="例）水曜なら13時まで大丈夫です"
+        oninput="setNote(this.value)">${esc(mine[NOTE_KEY]||'')}</textarea>
+      <p class="note tight">同じ日の別の時間帯は出せません。時間の希望はここに書いてください。</p>
+    </div>
+    <div class="brow" style="margin-top:18px"><button class="b" onclick="submitAnswer()">この内容で回答する</button>
+      ${isDirty()?`<span class="note">まだ送信されていません</span>`:''}</div>
+  </section>`;
+  return h;
+}
+
+/* ---- ④ 通知 ---- */
+function viewFeed() {
+  if (!state.feed.length) {
+    return `<section><p class="empty">まだ通知はありません。${mode==='demo'?'<br>上の「＋1日」で時間を進めてみてください。':''}</p></section>`;
+  }
+  const kind={ miss:['未回答',''], fix:['確定','fix'], answer:['回答',''],
+               reopen:['再調整',''], none:['不成立','fix'], cand:['候補',''], remind:['催促',''] };
+  return `<section><div class="slabel">通知</div>
+    <ul class="feed">${state.feed.map(f=>{
+      const [k,cl]=kind[f.type]||['—',''];
+      return `<li><div class="k ${cl}">${k}</div>
+        <div class="bd"><div class="t">${fmt(f.at)}</div><div class="fmsg">${f.msg}</div></div></li>`;
+    }).join('')}</ul></section>`;
+}
+
+// 送信していない回答を持ったまま閉じようとしたら止める
+window.addEventListener('beforeunload', e => { if (isDirty()) { e.preventDefault(); e.returnValue=''; } });
+// 取り消しバーは60秒で自然に消す
+setInterval(() => { if (state.undo && Date.now()-state.undo.at > 60000) { state.undo=null; renderStatus(); } }, 5000);
+
+boot();
+</script>
+</body>
+</html>
