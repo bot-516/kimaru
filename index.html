@@ -459,29 +459,38 @@ async function boot() {
 }
 /* 見ている画面によって、取りに行く先を変える */
 async function sync() {
-  if (state.view==='group') { if (await pullGroup()) render(); return; }
-  if (eventId) await pull();
+  if (state.view==='group') { if (await pullGroup()) syncRender(); return; }
+  if (eventId) await pull(true);
 }
-async function pull() {
+let lastSig = null;
+async function pull(fromSync) {
   if (mode!=='shared' || syncing) return false;
   syncing=true;
   try {
     const {data:ev} = await db.from('events').select('*').eq('id',eventId).maybeSingle();
     if (!ev) return false;
     const {data:ans} = await db.from('answers').select('*').eq('event_id',eventId);
-    fromRow(ev, ans); state.now=new Date();
     // グループの日程なら、参加者は「作った時点の名簿」ではなく「今のグループの名簿」。
     // 途中で誘われた人が回答できないのは、このツールの目的そのものに反する。
+    const gms = ev.group_id ? await readMembersOf(ev.group_id) : null;
+    // 中身が前回と同じなら、画面を作り直さない。
+    // 意味もなく3秒ごとにDOMを捨てると、押している最中のボタンまで巻き添えになる。
+    const sig = JSON.stringify([ev.members, ev.candidates, ev.deadline, ev.confirmed, ev.failed,
+      ev.title, ev.slot, ev.place, ev.memo, (ev.feed||[]).length, gms,
+      (ans||[]).map(a=>[a.member, a.value])]);
+    const changed = (sig !== lastSig); lastSig = sig;
+    fromRow(ev, ans); state.now=new Date();
     let grew=false;
-    if (state.groupId) {
-      const now = await readMembersOf(state.groupId);
-      if (now) for (const m of now) if (!state.members.includes(m)) { state.members.push(m); grew=true; }
-    }
+    if (gms) for (const m of gms) if (!state.members.includes(m)) { state.members.push(m); grew=true; }
     // 締切の判定は常駐サーバーではなく「誰かが画面を開いたとき」に走る。画面にもそう書いてある。
+    // ここは時間で動くので、データが同じでも毎回通す。
     const key = () => JSON.stringify([state.confirmed,state.failed,state.feed.length,state.sentReminders.length]);
     const before = key(); tick();
-    if (grew || key()!==before) await persist();
-    render(); return true;
+    const ticked = key()!==before;
+    if (grew || ticked) await persist();
+    if (!fromSync) render();
+    else if (changed || grew || ticked) syncRender();
+    return true;
   } catch (e) { console.error(e); return false; }
   finally { syncing=false; }
 }
@@ -1099,6 +1108,21 @@ function decidedText() {
 /* ================= 描画 ================= */
 /* 共有モードは3秒ごとに再描画が走る。入力値とフォーカスを退避しないと、
    名前を打っている途中で消える。 */
+/* 3秒ごとの同期で画面を作り直すと、ボタンを押している最中に
+   そのボタンごと消えることがある。押し下げてから離すまでの間に
+   要素が入れ替わると、クリックは成立しない（1回目だけ効かない、に見える）。
+   指が触れている間は描き直しを待たせる。 */
+let uiBusy=false, renderPending=false;
+addEventListener('pointerdown', ()=>{ uiBusy=true; });
+addEventListener('pointerup',   ()=>{ uiBusy=false;
+  // click は pointerup のあとに飛んでくる。ここで即座に描き直すと、
+  // 今まさに押されたボタンを click が届く前に消してしまう。1手番あける。
+  setTimeout(()=>{ if (renderPending) { renderPending=false; render(); } }, 0); });
+addEventListener('pointercancel',()=>{ uiBusy=false; });
+function syncRender() {
+  if (uiBusy) { renderPending=true; return; }
+  render();
+}
 function renderBody(html) {
   const a=document.activeElement;
   const keep = a && (a.tagName==='INPUT'||a.tagName==='TEXTAREA') && a.id
@@ -1113,6 +1137,9 @@ function renderToast() {
   if (notice) box.insertAdjacentHTML('afterbegin',`<div class="toast">${esc(notice)}</div>`);
 }
 function render() {
+  // 指が触れている間は作り直さない。押し下げてから離すまでの間に要素が入れ替わると、
+  // クリックは成立しないまま消える（「1回目だけ効かない」の正体）。
+  if (uiBusy) { renderPending=true; return; }
   const bare = ['new','newgroup','group'].includes(state.view);
   document.querySelector('nav.tabs').style.display = bare ? 'none' : '';
   document.querySelector('header.app').style.display = bare ? 'none' : '';
