@@ -436,8 +436,21 @@ async function boot() {
       // 初めての人は自分が何をすればいいのか分からない。まず入口を見せる。
       openNewGroup();
     }
+    // URLを手で書き換えられたとき。前の画面の状態が残ったまま次の画面が描かれると
+    // 「作成フォームとグループ画面が混ざる」ような表示になるので、素直に読み込み直す。
+    window.addEventListener('hashchange', () => {
+      const q2 = new URLSearchParams(location.hash.slice(1));
+      const e2 = q2.get('e'), g2 = q2.get('g');
+      if (e2) { if (e2 !== eventId) location.reload(); return; }        // 別のイベントを指している
+      if (g2) { if (g2 !== state.gid || eventId) location.reload(); return; }
+      if (eventId || state.view !== 'newgroup') location.reload();      // 入口に戻された
+    });
     setInterval(sync, 3000);
-    setInterval(()=>{ state.now=new Date(); renderStatus(); renderTopbar(); }, 30000);
+    setInterval(()=>{ state.now=new Date();
+      // 作成画面・グループ画面には締切バーが無い。ここで描き直すと
+      // 「締切を過ぎています」が一瞬割り込んで出てしまう。
+      if (['new','newgroup','group'].includes(state.view)) return;
+      renderStatus(); renderTopbar(); }, 30000);
   } catch (e) {
     console.error(e); mode='demo'; state=initialState();
     toast('サーバーに繋がらなかったので、デモモードで起動しました。');
@@ -457,10 +470,17 @@ async function pull() {
     if (!ev) return false;
     const {data:ans} = await db.from('answers').select('*').eq('event_id',eventId);
     fromRow(ev, ans); state.now=new Date();
+    // グループの日程なら、参加者は「作った時点の名簿」ではなく「今のグループの名簿」。
+    // 途中で誘われた人が回答できないのは、このツールの目的そのものに反する。
+    let grew=false;
+    if (state.groupId) {
+      const now = await readMembersOf(state.groupId);
+      if (now) for (const m of now) if (!state.members.includes(m)) { state.members.push(m); grew=true; }
+    }
     // 締切の判定は常駐サーバーではなく「誰かが画面を開いたとき」に走る。画面にもそう書いてある。
     const key = () => JSON.stringify([state.confirmed,state.failed,state.feed.length,state.sentReminders.length]);
     const before = key(); tick();
-    if (key()!==before) await persist();
+    if (grew || key()!==before) await persist();
     render(); return true;
   } catch (e) { console.error(e); return false; }
   finally { syncing=false; }
@@ -530,6 +550,14 @@ function forgetGroup(id) {
    まだ group_members を作っていないSupabaseでも動くように、
    失敗したら昔のやり方（グループの行に配列）へ自動で落ちる。 */
 let membersTable = true;      // 一度でも失敗したら false にして、以後は聞きに行かない
+async function readMembersOf(gid) {
+  if (!membersTable || !gid) return null;
+  const {data:rows, error} = await db.from('group_members').select('*').eq('group_id',gid);
+  if (error) { membersTable=false; return null; }
+  return (rows||[]).slice()
+    .sort((a,b)=> String(a.joined_at||'').localeCompare(String(b.joined_at||'')))
+    .map(r=>r.member);
+}
 async function readMembers() {
   if (!membersTable) return null;
   const {data:rows, error} = await db.from('group_members').select('*').eq('group_id',state.gid);
@@ -590,7 +618,9 @@ async function saveGroup() {
 /* イベント1件の状態を、グループ画面に出す用にまとめる */
 function evStatus(e) {
   const ans = state.gans[e.id] || {};
-  const ms = e.members || [];
+  // 人数はグループの今の名簿で数える。イベント行の名簿は作った時点のもので、
+  // あとから入った人が「3人中3人が回答」に含まれず、回答待ちが見えなくなる。
+  const ms = (e.group_id && state.gmembers.length) ? state.gmembers : (e.members || []);
   const done = ms.filter(m => ans[m] && e.candidates.length && e.candidates.every(c=>ans[m][c.id]));
   const sc = cid => { let s=0; for (const m of ms) { const v=ans[m]&&ans[m][cid];
       if (v==='yes') s+=CONFIG.scoreYes; if (v==='maybe') s+=CONFIG.scoreMaybe; if (v==='no') s+=CONFIG.scoreNo; } return s; };
@@ -946,8 +976,14 @@ function removeCandidate(id) {
   if (state.selected===id) state.selected=null;
   persist(); render();
 }
-function setAnswer(cid,val){ if (!state.me) return; ensureDraft()[cid]=val; render(); }
-function fillAll(val){ if (!state.me) return; const d=ensureDraft(); state.candidates.forEach(c=>d[c.id]=val); render(); }
+function setAnswer(cid,val){
+  if (!state.me) return toast('先に、上で自分の名前を選んでください。');
+  ensureDraft()[cid]=val; render();
+}
+function fillAll(val){
+  if (!state.me) return toast('先に、上で自分の名前を選んでください。');
+  const d=ensureDraft(); state.candidates.forEach(c=>d[c.id]=val); render();
+}
 function setNote(v){ if (!state.me) return; ensureDraft()[NOTE_KEY]=v.slice(0,100); }
 function discardDraft(){ state.draft=null; }
 async function submitAnswer() {
