@@ -499,6 +499,29 @@ function eventNoticeText() {
    =================================================================== */
 function groupUrl(){ return location.origin + location.pathname + '#g=' + state.gid; }
 
+/* このブラウザで開いたグループを覚えておく。
+   ログインを入れずに「自分のグループに戻る」を成立させるための最小の仕掛け。
+   保存できない環境（プライベートウィンドウ等）でも、アプリは普通に動く。 */
+const RECENT_KEY = 'kimaru.groups';
+function recentGroups() {
+  try { const v = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
+    return Array.isArray(v) ? v.filter(g=>g && g.id) : []; }
+  catch (e) { return []; }
+}
+function rememberGroup(id, name) {
+  if (!id) return;
+  try {
+    const list = recentGroups().filter(g=>g.id!==id);
+    list.unshift({ id, name: name||'', at: Date.now() });
+    localStorage.setItem(RECENT_KEY, JSON.stringify(list.slice(0,12)));
+  } catch (e) {}
+}
+function forgetGroup(id) {
+  try { localStorage.setItem(RECENT_KEY, JSON.stringify(recentGroups().filter(g=>g.id!==id))); }
+  catch (e) {}
+  render();
+}
+
 async function pullGroup() {
   if (mode!=='shared' || !state.gid) return false;
   try {
@@ -516,6 +539,7 @@ async function pullGroup() {
       (as||[]).forEach(a=>{ (state.gans[a.event_id] ||= {})[a.member]=a.value||{}; });
     }
     if (state.me && !state.gmembers.includes(state.me)) state.me='';
+    rememberGroup(state.gid, state.gname);
     return true;
   } catch (e) { console.error(e); return false; }
 }
@@ -548,10 +572,15 @@ function newDraft() {
   return { title:'', host:'', place:'', memo:'', s:'12:15', e:'13:00',
            deadline:dl, days:[], err:'' };
 }
-function openNewGroup() {
-  state.ng = { name:'', me:'', err:'' };
+function openNewGroup(force) {
+  state.ng = { name:'', me:'', err:'', force:!!force };
   state.view = 'newgroup';
   render();
+}
+async function gotoGroup(id) {
+  state.gid=id; location.hash='g='+id;
+  if (await pullGroup()) { state.view='group'; render(); }
+  else { forgetGroup(id); location.hash=''; toast('このグループは見つかりませんでした。'); openNewGroup(); }
 }
 async function createGroup() {
   const n=state.ng;
@@ -568,6 +597,7 @@ async function createGroup() {
       location.hash='g='+state.gid; }
     catch (e) { console.error(e); toast('作成に失敗しました。通信を確認してください。'); return; }
   }
+  rememberGroup(state.gid, nm);
   state.view='group'; render();
   toast('できました。このURLをLINEに1回だけ貼れば、次からは貼り直し不要です。');
 }
@@ -1006,8 +1036,10 @@ function render() {
   document.querySelector('nav.tabs').style.display = bare ? 'none' : '';
   document.querySelector('header.app').style.display = bare ? 'none' : '';
   if (bare) {
+    const others = state.view==='group' ? recentGroups().filter(g=>g.id!==state.gid) : [];
     const back = state.view==='new' && state.gid
-      ? `<button onclick="backToGroup()">‹ グループに戻る</button>` : '';
+      ? `<button onclick="backToGroup()">‹ グループに戻る</button>`
+      : (others.length ? `<button onclick="location.hash='';openNewGroup()">グループを切り替え</button>` : '');
     document.getElementById('topbar').innerHTML =
       `<span class="tag">${state.view==='group'?'グループ':'新規作成'}</span>
        <span class="now">${state.view==='group'?esc(state.gname):''}</span><span class="sp"></span>${back}`;
@@ -1430,6 +1462,18 @@ function viewAnswer() {
 /* ---- グループを作る（いちばん最初の画面） ---- */
 function viewNewGroup() {
   const n=state.ng||{name:'',me:'',err:''};
+  const rec = n.force ? [] : recentGroups();
+  if (rec.length) {
+    return `<div class="hero">
+      <div class="wordmark" style="font-size:34px">キ<em>マ</em>る</div>
+    </div>
+    <section><div class="slabel">前に使ったグループ</div>
+      <ul class="evlist">${rec.map(g=>`<li><button class="ev" onclick="gotoGroup('${esc(g.id)}')">
+        <div class="t">${esc(g.name||'（名前なし）')}</div></button></li>`).join('')}</ul>
+      <div class="brow" style="margin-top:14px">
+        <button class="b line" onclick="openNewGroup(true)">新しいグループを作る</button></div>
+    </section>`;
+  }
   return `<div class="hero">
     <div class="wordmark" style="font-size:34px">キ<em>マ</em>る</div>
     <h1 style="font-size:22px;margin-top:14px">期日が来たら、<b>日が決まる</b>。</h1>
