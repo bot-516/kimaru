@@ -250,6 +250,61 @@ details.inv summary::before{content:'▸ ';color:var(--rule)}
 details.inv[open] summary::before{content:'▾ '}
 .who .x{min-width:40px;justify-content:center;display:inline-flex;align-items:center}
 .timepair{display:flex;gap:8px;align-items:center;flex-wrap:nowrap}
+/* ---- 作成画面 ---- */
+.hero{padding:38px 0 26px;border-bottom:1px solid var(--hair)}
+.hero h1{font-family:var(--mincho);font-weight:500;font-size:31px;line-height:1.5;letter-spacing:.02em}
+.hero h1 b{color:var(--accent);font-weight:500}
+.hero p{font-size:14px;color:var(--muted);margin-top:12px;line-height:1.9}
+.steps{display:flex;margin-top:20px;flex-wrap:wrap}
+.steps div{font-size:12px;color:var(--muted);padding-right:14px}
+.steps div::after{content:'→';margin-left:10px;color:var(--rule)}
+.steps div:last-child::after{content:''}
+.steps b{color:var(--ink);font-weight:600}
+.form{padding:24px 0}
+.frow{padding:14px 0;border-bottom:1px solid var(--hair)}
+.frow > label{display:block;font-size:12px;letter-spacing:.1em;color:var(--muted);margin-bottom:8px}
+.frow .req{color:var(--accent);margin-left:4px}
+.frow input[type=text]{width:100%}
+.frow .help{font-size:12px;color:var(--muted);margin-top:7px;line-height:1.8}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.chips button{font:inherit;font-size:13px;padding:8px 13px;min-height:40px;cursor:pointer;
+  border:1px solid var(--rule);background:var(--surface);color:var(--ink)}
+.chips button:hover{border-color:var(--ink)}
+.chips button.on{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.cell.pick{background:var(--accent)!important;color:#fff}
+.cell.pick .d{font-weight:700}
+.picked{font-size:13px;margin-top:12px;line-height:1.9}
+.create{padding:22px 0 8px;border-top:1px solid var(--rule);
+  display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.err{font-size:13px;color:var(--accent);font-weight:600}
+/* ---- グループ画面のカレンダー ---- */
+.gcal .cell{height:62px;justify-content:flex-start;padding-top:7px;gap:2px}
+.gcal .cell .d{font-size:13px}
+.gcal .cell .ttl{font-size:9px;line-height:1.25;max-width:100%;padding:0 3px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gcal .cell.fixed .ttl{color:#fff}
+.gcal .cell .dot{width:4px;height:4px;border-radius:50%;background:var(--muted)}
+.gcal .cell.sel{box-shadow:inset 0 0 0 2px var(--ink)}
+@media(max-width:560px){ .gcal .cell{height:54px} }
+
+/* ---- グループ画面 ---- */
+.gtop{padding:30px 0 22px;border-bottom:1px solid var(--hair)}
+.gtop .gn{font-family:var(--mincho);font-weight:500;font-size:27px;letter-spacing:.04em;line-height:1.4}
+.gtop .gm{font-size:13px;color:var(--muted);margin-top:8px}
+.evlist{list-style:none}
+.ev{display:block;width:100%;text-align:left;font:inherit;background:var(--surface);color:var(--ink);
+  border:1px solid var(--rule);padding:16px 18px;margin-bottom:10px;cursor:pointer}
+.ev:hover{border-color:var(--ink)}
+.ev .t{font-size:16px;font-weight:600}
+.ev .s{font-size:13px;color:var(--muted);margin-top:5px;font-variant-numeric:tabular-nums}
+.ev .s b{color:var(--ink)}
+.ev.fixed{border-left:3px solid var(--accent)}
+.ev.todo{border-left:3px solid var(--ink)}
+.ev .badge{font-size:11px;letter-spacing:.08em;border:1px solid var(--ink);padding:2px 7px;margin-left:8px;white-space:nowrap}
+.ev.fixed .badge{border-color:var(--accent);color:var(--accent)}
+.who.pickable{cursor:pointer}
+.who.pickable:hover{border-color:var(--ink)}
+.who.iam{background:var(--ink);color:var(--surface);border-color:var(--ink)}
 .toast{padding:12px 16px;border-left:2px solid var(--ink);background:var(--surface);font-size:13px;margin-bottom:18px}
 .undo{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
   padding:12px 16px;border:1px solid var(--ink);background:var(--surface);font-size:13px;margin-bottom:18px}
@@ -313,7 +368,7 @@ function initialState() {
     deadline: D(8,22,12),
     members:['りくと','けんじ','ゆうき','みなみ','そうた'],
     host:'りくと', me:'りくと',            // デモでは幹事の視点で見せる
-    slot:'12:15 - 13:00',
+    slot:'12:15 - 13:00', place:'学食3階', memo:'',
     candidates:[
       {id:'c1',date:D(8,24,12,15)},{id:'c2',date:D(8,25,12,15)},{id:'c3',date:D(8,26,12,15)},
       {id:'c4',date:D(8,27,12,15)},{id:'c5',date:D(8,28,12,15)}
@@ -325,7 +380,8 @@ function initialState() {
     feed:[], sentReminders:[], confirmed:null, failed:false,
     view:'cal', calY:2026, calM:8, selected:null, hostMenu:false,
     unread:0, draft:null, joining:false, pendingDel:null, pendingClose:false,
-    undo:null, seq:6
+    undo:null, seq:6, nd:null,     // nd = 作成画面の入力内容
+    gid:null, groupId:null, gname:'', gmembers:[], gevents:[], gans:{}, ng:null, gpick:[]
   };
 }
 let state = initialState();
@@ -336,6 +392,7 @@ const newId = () => Math.random().toString(36).slice(2,6) + Math.random().toStri
 
 function toRow() {
   return { id:eventId, title:state.title, group_name:state.group, host:state.host, slot:state.slot,
+    place:state.place||null, memo:state.memo||null, group_id:state.groupId||null,
     deadline:state.deadline.toISOString(), members:state.members,
     candidates:state.candidates.map(c=>({id:c.id,date:c.date.toISOString()})),
     confirmed:state.confirmed, failed:state.failed,
@@ -344,6 +401,7 @@ function toRow() {
 }
 function fromRow(row, answerRows) {
   state.title=row.title; state.group=row.group_name; state.host=row.host;
+  state.place=row.place||''; state.memo=row.memo||''; state.groupId=row.group_id||null;
   state.slot=row.slot||'12:15 - 13:00';
   state.deadline=new Date(row.deadline);
   state.members=row.members||[];
@@ -365,9 +423,20 @@ async function boot() {
   try {
     db = window.supabase.createClient(SUPABASE.url, SUPABASE.key);
     mode='shared'; state.now=new Date();
-    eventId = new URLSearchParams(location.hash.slice(1)).get('e');
-    if (eventId) { if (!await pull()) await createEvent(); } else await createEvent();
-    setInterval(pull, 3000);
+    const q = new URLSearchParams(location.hash.slice(1));
+    eventId = q.get('e'); state.gid = q.get('g');
+    if (eventId) {
+      if (await pull()) { if (state.groupId) { state.gid=state.groupId; await pullGroup(); } }
+      else { eventId=null; location.hash=''; openNewGroup(); }
+    } else if (state.gid) {
+      if (await pullGroup()) state.view='group';
+      else { state.gid=null; location.hash=''; openNewGroup(); }
+    } else {
+      // 以前は勝手にイベントを作っていた。作った覚えのないものの中に放り込まれると、
+      // 初めての人は自分が何をすればいいのか分からない。まず入口を見せる。
+      openNewGroup();
+    }
+    setInterval(sync, 3000);
     setInterval(()=>{ state.now=new Date(); renderStatus(); renderTopbar(); }, 30000);
   } catch (e) {
     console.error(e); mode='demo'; state=initialState();
@@ -375,21 +444,10 @@ async function boot() {
   }
   render();
 }
-/* 共有モードでは、あらかじめメンバーを登録しない。来た人が自分で名前を足す。 */
-async function createEvent() {
-  eventId = newId();
-  const now=new Date(), cands=[];
-  let d=new Date(now); d.setDate(d.getDate()+1);
-  while (cands.length<5) {
-    if (d.getDay()!==0 && d.getDay()!==6) { const x=new Date(d); x.setHours(12,15,0,0);
-      cands.push({id:'c'+(cands.length+1),date:x}); }
-    d.setDate(d.getDate()+1);
-  }
-  Object.assign(state,{ title:'日程調整', group:'', host:'', members:[], me:'', candidates:cands,
-    deadline:new Date(now.getTime()+48*3600000), answers:{}, feed:[], sentReminders:[],
-    confirmed:null, failed:false, calY:cands[0].date.getFullYear(), calM:cands[0].date.getMonth()+1 });
-  await db.from('events').insert(toRow());
-  location.hash='e='+eventId;
+/* 見ている画面によって、取りに行く先を変える */
+async function sync() {
+  if (state.view==='group') { if (await pullGroup()) render(); return; }
+  if (eventId) await pull();
 }
 async function pull() {
   if (mode!=='shared' || syncing) return false;
@@ -420,7 +478,219 @@ async function saveAnswer() {
     return true;
   } catch (e) { console.error(e); toast('回答の保存に失敗しました。もう一度押してください。'); return false; }
 }
-function copyLink() { copyText(inviteText(), '招待の文面をコピーしました。LINEに貼ってください。'); }
+function copyLink() {
+  copyText(state.gid ? eventNoticeText() : inviteText(),
+    state.gid ? 'この日程の連絡文をコピーしました。' : '招待の文面をコピーしました。LINEに貼ってください。');
+}
+function eventNoticeText() {
+  const cs=sortedCands();
+  return `【${state.title}】回答をお願いします。\n`
+    + (cs.length?`候補：${fmtS(cs[0].date)}〜${fmtS(cs[cs.length-1].date)} の${cs.length}日／${state.slot}\n`:'')
+    + (state.place?`場所：${state.place}\n`:'')
+    + `締切：${fmt(state.deadline)}（過ぎると自動で決まります）\n${location.href}`;
+}
+
+/* ===================================================================
+   グループ —— LINEに1回だけ貼るURLの実体。
+
+   これまではイベント1件＝URL1本だったので、調整のたびに貼り直しが要った。
+   グループを噛ませると、同じURLの中でイベントを何度でも作れる。
+   メンバーもグループ側に持つので、2回目以降は名前の登録すら要らない。
+   =================================================================== */
+function groupUrl(){ return location.origin + location.pathname + '#g=' + state.gid; }
+
+async function pullGroup() {
+  if (mode!=='shared' || !state.gid) return false;
+  try {
+    const {data:g} = await db.from('groups').select('*').eq('id',state.gid).maybeSingle();
+    if (!g) return false;
+    state.gname=g.name||''; state.gmembers=g.members||[];
+    const {data:evs} = await db.from('events').select('*').eq('group_id',state.gid).order('created_at',{ascending:false});
+    state.gevents = (evs||[]).map(e=>({ ...e, deadline:new Date(e.deadline),
+      candidates:(e.candidates||[]).map(c=>({id:c.id,date:new Date(c.date)})) }));
+    // 各イベントの回答をまとめて1回で取る（イベントごとに問い合わせると遅くなる）
+    const ids = state.gevents.map(e=>e.id);
+    state.gans = {};
+    if (ids.length) {
+      const {data:as} = await db.from('answers').select('*').in('event_id',ids);
+      (as||[]).forEach(a=>{ (state.gans[a.event_id] ||= {})[a.member]=a.value||{}; });
+    }
+    if (state.me && !state.gmembers.includes(state.me)) state.me='';
+    return true;
+  } catch (e) { console.error(e); return false; }
+}
+async function saveGroup() {
+  if (mode!=='shared' || !state.gid) return;
+  try { await db.from('groups').update({ name:state.gname, members:state.gmembers }).eq('id',state.gid); }
+  catch (e) { console.error(e); toast('グループの保存に失敗しました。'); }
+}
+
+/* イベント1件の状態を、グループ画面に出す用にまとめる */
+function evStatus(e) {
+  const ans = state.gans[e.id] || {};
+  const ms = e.members || [];
+  const done = ms.filter(m => ans[m] && e.candidates.length && e.candidates.every(c=>ans[m][c.id]));
+  const sc = cid => { let s=0; for (const m of ms) { const v=ans[m]&&ans[m][cid];
+      if (v==='yes') s+=CONFIG.scoreYes; if (v==='maybe') s+=CONFIG.scoreMaybe; if (v==='no') s+=CONFIG.scoreNo; } return s; };
+  let best=null;
+  for (const c of [...e.candidates].sort((a,b)=>a.date-b.date)) { const s=sc(c.id); if (!best||s>best.s) best={s,c}; }
+  const mine = state.me ? (ans[state.me] && e.candidates.length && e.candidates.every(c=>ans[state.me][c.id])) : null;
+  return { done:done.length, total:ms.length, best: best&&best.s>0?best:null,
+           mine, left: Math.max(0, e.deadline - new Date()) };
+}
+
+/* ===================================================================
+   作成画面 —— 「入口」。ここが無いと、開いた人は何をすればいいか分からない。
+   =================================================================== */
+function newDraft() {
+  const base=new Date(); base.setHours(0,0,0,0);
+  const dl=new Date(); dl.setHours(dl.getHours()+48,0,0,0);
+  return { title:'', host:'', place:'', memo:'', s:'12:15', e:'13:00',
+           deadline:dl, days:[], err:'' };
+}
+function openNewGroup() {
+  state.ng = { name:'', me:'', err:'' };
+  state.view = 'newgroup';
+  render();
+}
+async function createGroup() {
+  const n=state.ng;
+  const nm=((document.getElementById('ngName')?.value ?? n.name)||'').trim();
+  const me=((document.getElementById('ngMe')?.value ?? n.me)||'').trim();
+  n.name=nm; n.me=me;
+  if (!nm) { n.err='グループの名前を入れてください。'; return render(); }
+  if (!me) { n.err='あなたの名前を入れてください。'; return render(); }
+  if (me.length>20) { n.err='名前は20文字までです。'; return render(); }
+  state.gid = newId(); state.gname=nm; state.gmembers=[me]; state.me=me;
+  state.gevents=[]; state.gans={}; state.ng=null;
+  if (mode==='shared') {
+    try { await db.from('groups').insert({ id:state.gid, name:nm, members:[me] });
+      location.hash='g='+state.gid; }
+    catch (e) { console.error(e); toast('作成に失敗しました。通信を確認してください。'); return; }
+  }
+  state.view='group'; render();
+  toast('できました。このURLをLINEに1回だけ貼れば、次からは貼り直し不要です。');
+}
+function setNG(k,v){ state.ng[k]=v; }
+async function joinGroup() {
+  const nm=((document.getElementById('gJoin')?.value)||'').trim();
+  if (!nm) return toast('名前を入れてください。');
+  if (nm.length>20) return toast('名前は20文字までです。');
+  if (!state.gmembers.includes(nm)) { state.gmembers.push(nm); await saveGroup(); }
+  state.me=nm; state.joining=false; render();
+}
+function pickMe(i){ state.me=state.gmembers[i]; render(); }
+function togglePick(k) {
+  const i=state.gpick.indexOf(k);
+  if (i>=0) state.gpick.splice(i,1); else state.gpick.push(k);
+  render();
+}
+function startFromPick() {
+  if (!state.me) return toast('先に自分の名前を選んでください。');
+  const p=[...state.gpick]; state.gpick=[]; openNew(p);
+}
+function backToGroup(){
+  eventId=null; state.confirmed=null; state.failed=false; state.draft=null;
+  location.hash='g='+state.gid; state.view='group';
+  pullGroup().then(render); render();
+}
+async function openEvent(id) {
+  eventId=id; location.hash='e='+id;
+  state.view='cal'; state.selected=null; state.draft=null;
+  if (mode==='shared') await pull(); else render();
+  window.scrollTo({top:0,behavior:'instant'});
+}
+
+function openNew(preset) {
+  state.nd = newDraft();
+  if (preset && preset.length) {
+    state.nd.days = [...preset];
+    const f = preset[0].split('-').map(Number);
+    state.calY = f[0]; state.calM = f[1];
+  }
+  state.view = 'new';
+  const n = new Date();
+  state.calY = n.getFullYear(); state.calM = n.getMonth()+1;
+  render();
+}
+const dayKey = d => `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
+function setND(k,v){ state.nd[k]=v; if (k!=='title'&&k!=='host'&&k!=='place'&&k!=='memo') render(); }
+function toggleDay(y,m,d) {
+  const k=`${y}-${m}-${d}`;
+  const i=state.nd.days.indexOf(k);
+  if (i>=0) state.nd.days.splice(i,1); else state.nd.days.push(k);
+  state.nd.err=''; render();
+}
+// よく使う組み合わせをボタン1つで。ここが「30秒で終わる」の入口になる
+function presetDays(kind) {
+  const n=new Date(); n.setHours(0,0,0,0);
+  const out=[]; let d=new Date(n); d.setDate(d.getDate()+1);
+  const want = kind==='weekend' ? [0,6] : [1,2,3,4,5];
+  const need = kind==='weekend' ? 4 : (kind==='next' ? 5 : 5);
+  if (kind==='next') { while (d.getDay()!==1) d.setDate(d.getDate()+1); }   // 次の月曜から
+  let guard=0;
+  while (out.length<need && guard++<60) {
+    if (want.includes(d.getDay())) out.push(`${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`);
+    d.setDate(d.getDate()+1);
+  }
+  state.nd.days=out; state.nd.err='';
+  const f=out[0].split('-');
+  state.calY=+f[0]; state.calM=+f[1];
+  render();
+}
+function presetDeadline(h) {
+  const d=new Date(); d.setHours(d.getHours()+h,0,0,0);
+  state.nd.deadline=d; render();
+}
+function setNDate(v) {
+  if (!v) return;
+  const [y,m,d]=v.split('-').map(Number), o=state.nd.deadline;
+  state.nd.deadline=new Date(y,m-1,d,o.getHours(),o.getMinutes()); render();
+}
+function setNTime(v) {
+  if (!v) return;
+  const [hh,mi]=v.split(':').map(Number), o=state.nd.deadline;
+  state.nd.deadline=new Date(o.getFullYear(),o.getMonth(),o.getDate(),hh,mi); render();
+}
+
+async function createFromDraft() {
+  const n=state.nd;
+  const val=(id,cur)=>((document.getElementById(id)?.value ?? cur)||'').trim();
+  const t=val('ndTitle',n.title);
+  const ho = state.gid ? state.me : val('ndHost',n.host);   // グループ内なら名前は既に分かっている
+  n.title=t; n.host=ho;
+  n.place=val('ndPlace',n.place); n.memo=val('ndMemo',n.memo);
+  if (!t)  { n.err='イベント名を入れてください。'; return render(); }
+  if (!ho) { n.err='あなたの名前を入れてください。'; return render(); }
+  if (ho.length>20) { n.err='名前は20文字までです。'; return render(); }
+  if (!n.days.length) { n.err='候補日を1日以上選んでください。'; return render(); }
+  if (n.deadline<=new Date()) { n.err='締切が過去になっています。'; return render(); }
+
+  const [hh,mm]=n.s.split(':').map(Number);
+  const cands=n.days.map(k=>k.split('-').map(Number))
+    .sort((a,b)=>new Date(a[0],a[1]-1,a[2])-new Date(b[0],b[1]-1,b[2]))
+    .map((p,i)=>({ id:'c'+(i+1), date:new Date(p[0],p[1]-1,p[2],hh,mm) }));
+
+  // グループがあれば、メンバーはそのまま引き継ぐ。2回目以降は名前の登録が要らない
+  const ms = state.gid && state.gmembers.length ? [...state.gmembers] : [ho];
+  Object.assign(state, {
+    title:t, group:state.gname||'', host:ho, me:ho, place:n.place, memo:n.memo,
+    slot:`${n.s} - ${n.e}`, members:ms, candidates:cands, deadline:n.deadline,
+    answers:{}, feed:[], sentReminders:[], confirmed:null, failed:false,
+    draft:null, selected:null, hostMenu:false, undo:null, unread:0, seq:cands.length+1,
+    calY:cands[0].date.getFullYear(), calM:cands[0].date.getMonth()+1, nd:null,
+    groupId: state.gid || null
+  });
+  if (mode==='shared') {
+    eventId = newId();
+    try { await db.from('events').insert(toRow()); location.hash='e='+eventId; }
+    catch (err) { console.error(err); toast('作成に失敗しました。通信を確認してください。'); }
+  }
+  push('cand', `<b>${esc(ho)}</b> が「${esc(t)}」を作成。候補${cands.length}日。`);
+  go('answer');
+  toast(state.gid ? 'できました。グループのみんなに自動で共有されています。'
+                  : '作れました。「招待の文面をコピー」でURLを配ってください。');
+}
 
 /* ================= 便利関数 ================= */
 const WD=['日','月','火','水','木','金','土'];
@@ -695,7 +965,12 @@ function inviteText() {
   const cs=sortedCands();
   return `【${state.title}】日程を決めます。\n`
     + (cs.length?`候補：${fmtS(cs[0].date)}〜${fmtS(cs[cs.length-1].date)} の${cs.length}日／${state.slot}\n`:'')
+    + (state.place?`場所：${state.place}\n`:'') + (state.memo?`${state.memo}\n`:'')
     + `締切：${fmt(state.deadline)}（過ぎると自動で決まります）\n${location.href}`;
+}
+function groupInvite() {
+  return `【${state.gname}】日程調整はここでやります。\n`
+    + `このURLをブックマークかピン留めしておいてください。次からはここに集まります。\n${groupUrl()}`;
 }
 function nudgeText() {
   const miss=unanswered().map(m=>{ const f=filledCount(m);
@@ -706,6 +981,7 @@ function decidedText() {
   const c=candById(state.confirmed); if (!c) return '';
   const miss=unanswered();
   return `【${state.title}】${fmtD(c.date)} ${state.slot} に決まりました。\n`
+    + (state.place?`場所：${state.place}\n`:'')
     + (miss.length?`※${miss.join('・')} は未回答のまま確定しています。\n`:'') + location.href;
 }
 
@@ -726,6 +1002,22 @@ function renderToast() {
   if (notice) box.insertAdjacentHTML('afterbegin',`<div class="toast">${esc(notice)}</div>`);
 }
 function render() {
+  const bare = ['new','newgroup','group'].includes(state.view);
+  document.querySelector('nav.tabs').style.display = bare ? 'none' : '';
+  document.querySelector('header.app').style.display = bare ? 'none' : '';
+  if (bare) {
+    const back = state.view==='new' && state.gid
+      ? `<button onclick="backToGroup()">‹ グループに戻る</button>` : '';
+    document.getElementById('topbar').innerHTML =
+      `<span class="tag">${state.view==='group'?'グループ':'新規作成'}</span>
+       <span class="now">${state.view==='group'?esc(state.gname):''}</span><span class="sp"></span>${back}`;
+    document.getElementById('status').innerHTML='';
+    document.getElementById('footnote').innerHTML = state.view==='group'
+      ? 'このURLを知っている人だけが見られます。'
+      : 'ログイン不要。';
+    renderBody(state.view==='newgroup' ? viewNewGroup() : state.view==='group' ? viewGroup() : viewNew());
+    renderToast(); return;
+  }
   renderTopbar();
   const dot=document.getElementById('feedDot');
   dot.style.display = state.unread>0?'inline-block':'none';
@@ -749,16 +1041,21 @@ function render() {
 }
 function renderTopbar() {
   document.getElementById('topbar').innerHTML = mode==='shared'
-    ? `<span class="tag">共有中</span><span class="now">${
+    ? `${state.gid?`<button onclick="backToGroup()">‹ ${esc(state.gname||'グループ')}</button>`
+           :`<span class="tag">共有中</span>`}
+       <span class="now">${
          state.confirmed ? `${fmtD(candById(state.confirmed).date)} に確定`
          : state.failed ? '未確定' : `締切まで ${leftText().replace('あと','')}`}</span><span class="sp"></span>
-       <button onclick="copyLink()">招待の文面をコピー</button>`
+       <button onclick="copyLink()">${state.gid?'この日程を知らせる':'招待の文面をコピー'}</button>`
     : `<span class="tag">デモ・仮想時計</span><span class="now">${fmt(state.now)}</span><span class="sp"></span>
        <button class="opt" onclick="advance(1)">＋1時間</button><button class="opt" onclick="advance(6)">＋6時間</button>
        <button onclick="advance(24)">＋1日</button><button onclick="resetAll()">最初から</button>`;
   document.getElementById('footnote').innerHTML = mode==='shared'
-    ? '送信機能はありません（催促と決定の文面だけ作ります）。決めるのは日ひとつ。回答は3秒ごとに同期。'
-    : 'デモモード。データはブラウザの中だけ。再読み込みで最初に戻ります。';
+    ? '回答は3秒ごとに同期。<br>'
+      + (state.gid
+         ? '<button class="b sm quiet" style="margin-top:10px" onclick="backToGroup()">グループに戻る</button>'
+         : '<button class="b sm quiet" style="margin-top:10px" onclick="location.hash=\'\';openNewGroup()">グループを作る</button>')
+    : 'デモモード。再読み込みで最初に戻ります。';
 }
 
 /* 状況バー：このツールの主張が常に見えている場所。
@@ -953,7 +1250,8 @@ function viewCalendar() {
   h+=`<section><div class="brow" style="justify-content:space-between;align-items:flex-start">
       <div><div class="slabel" style="margin:0">イベント</div>
         <div class="mj" style="font-size:19px;letter-spacing:.04em">${esc(state.title||'（名前なし）')}</div>
-        <p class="note">${state.group?esc(state.group)+'　':''}候補${state.candidates.length}日　${esc(state.slot)}　${state.members.length}人</p></div>
+        <p class="note">候補${state.candidates.length}日　${esc(state.slot)}　${state.members.length}人
+          ${state.place?`<br>場所　${esc(state.place)}`:''}${state.memo?`<br>${esc(state.memo)}`:''}</p></div>
       ${isHost()?`<button class="b sm quiet" onclick="toggleHostMenu()">${state.hostMenu?'閉じる':'設定'}</button>`
         :`<span class="note">締切と候補日を<br>変えられるのは<br>${esc(state.host)} さんだけ</span>`}</div>`;
   if (state.hostMenu && isHost()) {
@@ -981,7 +1279,7 @@ function viewCalendar() {
         </div></div>
       <div class="field"><label>共有</label>
         <button class="b sm quiet" onclick="copyText(location.href,'URLをコピーしました。')">URLだけコピー</button></div>
-      <p class="note" style="margin-top:8px">決めるのは日ひとつ。同じ日に昼と夜の2案は出せません。時間の希望は回答の「ひとこと」に書いてもらってください。</p>
+
     </div>`;
   }
   return h+`</section>`;
@@ -1014,7 +1312,7 @@ function viewBoard() {
         <tr><td>点数</td>${cands.map(c=>{const s=scoreOf(c.id).score;
           return `<td class="c ${cc(c)}" style="${c.id===winId?'color:var(--accent);font-weight:700':''}">${s}</td>`;}).join('')}</tr>
       </tfoot></table></div>
-      <p class="note tight">○＝＋2、△＝＋1、×＝−3。点数が一番高い日に決まります（同点なら早い日${tie>1?`。いまは同点${tie}日`:''}）。0点以下の日は選びません。「—」は未回答。</p>
+      <p class="note tight">○＋2　△＋1　×−3。点数が一番高い日に決まります${tie>1?`（同点${tie}日・早い日）`:''}。</p>
     </section>`;
   } else {
     h+=`<section><p class="empty">候補日がありません。カレンダーで日付を押して追加してください。</p></section>`;
@@ -1037,8 +1335,8 @@ function viewBoard() {
     if (miss.length && !state.confirmed) {
       h+=`<details class="inv"><summary>未回答の人に送る文面をつくる</summary>
         <div class="quote"><div class="txt">${esc(nudgeText())}</div>
-          <div class="r"><span class="note">送信機能はありません。文面だけ作ります。</span>
-            <button class="b sm line" onclick="copyText(nudgeText(),'コピーしました。LINEに貼ってください。')">コピー</button></div></div></details>`;
+          <div class="r"><span class="note">貼るだけ</span>
+            <button class="b sm line" onclick="copyText(nudgeText(),'コピーしました。')">コピー</button></div></div></details>`;
     }
     h+=`</section>`;
   }
@@ -1048,7 +1346,7 @@ function viewBoard() {
       ${state.confirmed?`<span class="left">確定済み</span>`
         :state.failed?`<span class="left urgent">締切超過・未確定</span>`
         :`<span class="left ${leftHours()<=24?'urgent':''}">${leftText()}</span>`}</div>
-    ${state.confirmed||state.failed?'':`<p class="note tight">自動確定は、締切を過ぎたあと最初に誰かがこのページを開いた時。常駐サーバーなし。</p>`}
+    ${state.confirmed||state.failed?'':`<p class="note tight">期日を過ぎたあと、最初に誰かが開いた時に決まります。</p>`}
     ${state.confirmed||state.failed||!state.members.length||!cands.length?'':
       (isHost()
         ? `<div class="brow" style="margin-top:16px">
@@ -1099,12 +1397,13 @@ function viewAnswer() {
   const todo=cands.filter(c=>!mine[c.id]).length;
   const partial = todo>0 && todo<cands.length;
   h+=`<section class="answers">
-    <div class="slabel">${esc(state.title)}　${esc(state.slot)}　／　締切 ${fmt(state.deadline)}</div>
+    <div class="slabel">${esc(state.title)}　${esc(state.slot)}${state.place?`　${esc(state.place)}`:''}　／　締切 ${fmt(state.deadline)}</div>
+    ${state.memo?`<p class="note" style="margin:-6px 0 12px">${esc(state.memo)}</p>`:''}
     <div class="quick"><span class="note">まとめて</span>
       <button onclick="fillAll('yes')">全部 ○</button>
       <button onclick="fillAll('maybe')">全部 △</button>
       <button onclick="fillAll('no')">全部 ×</button></div>
-    <p class="note" style="margin-bottom:8px">×は−3点。1人でも×が付いた日はほぼ落ちます。行けなくはないなら △ を。</p>
+    <p class="note" style="margin-bottom:8px">×は−3点。行けなくはないなら △ を。</p>
     ${partial?`<p class="note" style="color:var(--ink);font-weight:700">未記入が ${todo}件あります。</p>`:''}`;
   for (const c of cands) {
     const v=mine[c.id];
@@ -1120,11 +1419,255 @@ function viewAnswer() {
       <label for="noteBox" class="slabel" style="display:block;margin-bottom:8px">ひとこと（任意・100字まで）</label>
       <textarea class="cm" id="noteBox" maxlength="100" placeholder="例）水曜なら13時まで大丈夫です"
         oninput="setNote(this.value)">${esc(mine[NOTE_KEY]||'')}</textarea>
-      <p class="note tight">同じ日の別の時間帯は出せません。時間の希望はここに書いてください。</p>
+      <p class="note tight">時間の希望はここに。</p>
     </div>
     <div class="brow" style="margin-top:18px"><button class="b" onclick="submitAnswer()">この内容で回答する</button>
       ${isDirty()?`<span class="note">まだ送信されていません</span>`:''}</div>
   </section>`;
+  return h;
+}
+
+/* ---- グループを作る（いちばん最初の画面） ---- */
+function viewNewGroup() {
+  const n=state.ng||{name:'',me:'',err:''};
+  return `<div class="hero">
+    <div class="wordmark" style="font-size:34px">キ<em>マ</em>る</div>
+    <h1 style="font-size:22px;margin-top:14px">期日が来たら、<b>日が決まる</b>。</h1>
+  </div>
+  <div class="form">
+    <div class="frow"><label for="ngName">グループ名<span class="req">*</span></label>
+      <input type="text" id="ngName" maxlength="30" placeholder="JPHacks2026ファン組" value="${esc(n.name)}"
+        oninput="setNG('name',this.value)" onkeydown="if(event.key==='Enter')createGroup()"></div>
+    <div class="frow"><label for="ngMe">あなたの名前<span class="req">*</span></label>
+      <input type="text" id="ngMe" maxlength="20" placeholder="けんじ" value="${esc(n.me)}"
+        oninput="setNG('me',this.value)" onkeydown="if(event.key==='Enter')createGroup()"></div>
+  </div>
+  <div class="create">
+    <button class="b" onclick="createGroup()">作る</button>
+    ${n.err?`<span class="err">${esc(n.err)}</span>`:''}
+  </div>`;
+}
+
+/* ---- グループの中身 ---- */
+function viewGroup() {
+  const live = state.gevents.filter(e=>!e.confirmed && !e.failed);
+  const done = state.gevents.filter(e=>e.confirmed || e.failed);
+  let h=`<div class="gtop">
+    <div class="gn">${esc(state.gname||'（名前なし）')}</div>
+    <div class="gm">${state.gmembers.length}人　調整${state.gevents.length}件</div>
+  </div>`;
+
+  // 誰として見ているか。ここが決まらないと回答も催促も始まらない
+  h+=`<section><div class="slabel">あなたは誰ですか</div>`;
+  if (state.gmembers.length) {
+    h+=`<div class="people">${state.gmembers.map((m,i)=>
+      `<button class="who pickable ${m===state.me?'iam':''}" onclick="pickMe(${i})">${esc(m)}</button>`).join('')}</div>`;
+  }
+  // 名前が決まっていない人には、選ぶ手段と足す手段を同時に出す。
+  // 「名前がない人はこちら」を挟むと、初めての人が一手余分に踏む。
+  if (!state.me || state.joining) {
+    h+=`<div class="brow" style="margin-top:${state.gmembers.length?'12':'0'}px">
+      <input type="text" id="gJoin" maxlength="20" placeholder="名前を入力" style="flex:1;min-width:140px"
+        onkeydown="if(event.key==='Enter')joinGroup()">
+      <button class="b" onclick="joinGroup()">参加する</button>
+      ${state.me?`<button class="b sm quiet" onclick="state.joining=false;render()">やめる</button>`:''}</div>`;
+
+  } else {
+    h+=`<p class="note tight"><button class="b sm quiet" onclick="state.joining=true;render()">別の人を追加する</button></p>`;
+  }
+  h+=`</section>`;
+
+  // カレンダー：いま何が入っているかを、まず見せる
+  const y=state.calY, m=state.calM;
+  const fixedOn={}, candOn={};
+  state.gevents.forEach(e=>{
+    if (e.confirmed) { const c=e.candidates.find(x=>x.id===e.confirmed);
+      if (c) fixedOn[`${c.date.getFullYear()}-${c.date.getMonth()+1}-${c.date.getDate()}`]={t:e.title,id:e.id}; }
+    else if (!e.failed) e.candidates.forEach(c=>{
+      const k=`${c.date.getFullYear()}-${c.date.getMonth()+1}-${c.date.getDate()}`; candOn[k]=(candOn[k]||0)+1; });
+  });
+  const today=new Date(); today.setHours(0,0,0,0);
+  const days=new Date(y,m,0).getDate(), lead0=new Date(y,m-1,1).getDay();
+  const cells=[];
+  for (let i=0;i<lead0;i++) cells.push(null);
+  for (let d=1;d<=days;d++) cells.push(d);
+  while (cells.length%7) cells.push(null);
+  const weeks=[];
+  for (let i=0;i<cells.length;i+=7) {
+    const w=cells.slice(i,i+7);
+    const alive=w.some(d=>d!==null && (new Date(y,m-1,d)>=today || fixedOn[`${y}-${m}-${d}`]));
+    if (alive||weeks.length) weeks.push(w);
+  }
+
+  h+=`<section><div class="slabel">予定</div>
+    <div class="calhead"><button onclick="shiftMonth(-1)" aria-label="前の月">‹</button>
+      <div class="m">${y}年 ${m}月</div>
+      <button onclick="shiftMonth(1)" aria-label="次の月">›</button></div>
+    <div class="grid gcal">${WD.map(w=>`<div class="wd">${w}</div>`).join('')}`;
+  for (const w of weeks) for (const d of w) {
+    if (d===null) { h+=`<div class="cell blank"></div>`; continue; }
+    const k=`${y}-${m}-${d}`, fx=fixedOn[k], cd=candOn[k];
+    const past=new Date(y,m-1,d)<today;
+    const cls=['cell']; let click='', inner=`<span class="d">${d}</span>`, label=`${m}月${d}日`;
+    if (fx) { cls.push('fixed'); inner+=`<span class="ttl">${esc(fx.t)}</span>`;
+      click=`onclick="openEvent('${fx.id}')"`; label+=` ${fx.t}`; }
+    else if (past) cls.push('past');
+    else {
+      cls.push('addable');
+      if (cd) inner+=`<span class="dot"></span>`;
+      if (state.gpick.includes(k)) cls.push('sel');
+      click=`onclick="togglePick('${k}')"`;
+      label+=cd?` 調整中の候補日`:` 選ぶ`;
+    }
+    h+=`<button class="${cls.join(' ')}" ${click} ${click?'':'disabled'} aria-label="${esc(label)}">${inner}</button>`;
+  }
+  h+=`</div><div class="legend">
+      <span><i style="background:var(--accent)"></i>決まった予定</span>
+      <span><i style="background:var(--surface);position:relative"><i style="display:block;width:4px;height:4px;border-radius:50%;background:var(--muted);border:none;margin:3px auto 0"></i></i>調整中</span>
+    </div>`;
+  if (state.gpick.length) {
+    const s=[...state.gpick].map(k=>k.split('-').map(Number)).sort((a,b)=>new Date(a[0],a[1]-1,a[2])-new Date(b[0],b[1]-1,b[2]));
+    h+=`<div class="brow" style="margin-top:14px">
+      <button class="b" onclick="startFromPick()" ${state.me?'':'disabled'}>この${s.length}日で決める</button>
+      <span class="note">${s.map(p=>fmtS(new Date(p[0],p[1]-1,p[2]))).join('　')}</span>
+      <button class="b sm quiet" onclick="state.gpick=[];render()">選び直す</button></div>`;
+  }
+  h+=`</section>`;
+
+  // 進行中
+  h+=`<section><div class="slabel">進行中</div>`;
+  if (!live.length) {
+    h+=`<p class="note">いま調整中のものはありません。</p>`;
+  } else {
+    h+=`<ul class="evlist">${live.map(e=>{
+      const s=evStatus(e);
+      const hrs=Math.max(0,Math.round(s.left/3600000));
+      const mine = state.me ? (s.mine ? '回答済み' : '未回答') : '';
+      return `<li><button class="ev ${state.me&&!s.mine?'todo':''}" onclick="openEvent('${e.id}')">
+        <div class="t">${esc(e.title)}${state.me&&!s.mine?'<span class="badge">要回答</span>':''}</div>
+        <div class="s">${s.best?`このままだと <b>${fmtD(s.best.c.date)}</b>　`:''}あと${hrs}時間　${s.done}/${s.total}人が回答${mine?'　'+mine:''}</div>
+      </button></li>`;}).join('')}</ul>`;
+  }
+  h+=`<div class="brow" style="margin-top:14px">
+    <button class="b" onclick="openNew()" ${state.me?'':'disabled title="先に名前を選んでください"'}>新しい日程</button>
+    ${state.me?'':'<span class="note">先に名前を選ぶ</span>'}</div></section>`;
+
+  // 決まったもの
+  if (done.length) {
+    h+=`<section><div class="slabel">決まったもの</div><ul class="evlist">${done.map(e=>{
+      const c=e.candidates.find(x=>x.id===e.confirmed);
+      return `<li><button class="ev ${e.confirmed?'fixed':''}" onclick="openEvent('${e.id}')">
+        <div class="t">${esc(e.title)}</div>
+        <div class="s">${e.confirmed&&c?`<b>${fmtD(c.date)}</b>　${esc(e.slot||'')}${e.place?'　'+esc(e.place):''}`:'決まりませんでした'}</div>
+      </button></li>`;}).join('')}</ul></section>`;
+  }
+
+  // URLの共有
+  h+=`<section><div class="slabel">このグループのURL</div>
+    <div class="quote"><div class="txt">${esc(groupUrl())}</div>
+      <div class="r"><span class="note">LINEに貼っておく</span>
+        <button class="b sm line" onclick="copyText(groupInvite(),'コピーしました。')">コピー</button></div></div>
+  </section>`;
+  return h;
+}
+
+/* ---- ⓪ 作成画面 ---- */
+function viewNew() {
+  const n=state.nd, y=state.calY, m=state.calM;
+  const days=new Date(y,m,0).getDate(), lead0=new Date(y,m-1,1).getDay();
+  const today=new Date(); today.setHours(0,0,0,0);
+  const dl=n.deadline;
+  const dlv=`${dl.getFullYear()}-${pad(dl.getMonth()+1)}-${pad(dl.getDate())}T${pad(dl.getHours())}:${pad(dl.getMinutes())}`;
+
+  let h=`<div class="hero" style="padding:26px 0 18px">
+    <h1 style="font-size:23px">${state.gid?'新しい日程':'日程を決める'}</h1>
+    ${state.gid?`<p style="margin-top:8px">${esc(state.gname)}　${state.gmembers.length}人</p>`:''}
+  </div>
+  <div class="form">
+    <div class="frow"><label for="ndTitle">イベント名<span class="req">*</span></label>
+      <input type="text" id="ndTitle" maxlength="40" placeholder="例）昼休み集まれる日" value="${esc(n.title)}"
+        oninput="setND('title',this.value)"></div>
+    ${state.gid
+      ? `<div class="frow"><label>参加者</label>
+          <div class="people">${state.gmembers.map(m=>`<span class="who ${m===state.me?'iam':''}">${esc(m)}</span>`).join('')}</div></div>`
+      : `<div class="frow"><label for="ndHost">あなたの名前<span class="req">*</span></label>
+          <input type="text" id="ndHost" maxlength="20" placeholder="けんじ" value="${esc(n.host)}"
+            oninput="setND('host',this.value)"></div>`}
+    <div class="frow"><label for="ndPlace">場所（任意）</label>
+      <input type="text" id="ndPlace" maxlength="40" placeholder="例）学食3階 / オンライン" value="${esc(n.place)}"
+        oninput="setND('place',this.value)"></div>
+    <div class="frow"><label for="ndMemo">メモ（任意）</label>
+      <input type="text" id="ndMemo" maxlength="80" placeholder="例）1時間くらい、進捗の共有" value="${esc(n.memo)}"
+        oninput="setND('memo',this.value)"></div>
+
+    <div class="frow"><label>時間帯</label>
+      <span class="timepair">
+        <input type="time" value="${esc(n.s)}" onchange="setND('s',this.value)" aria-label="開始時刻">
+        <span class="note">〜</span>
+        <input type="time" value="${esc(n.e)}" onchange="setND('e',this.value)" aria-label="終了時刻">
+      </span>
+</div>
+
+    <div class="frow"><label>候補日<span class="req">*</span></label>
+      <div class="chips">
+        <button onclick="presetDays('week')">これからの平日5日</button>
+        <button onclick="presetDays('next')">来週の平日5日</button>
+        <button onclick="presetDays('weekend')">これからの土日4日</button>
+      </div>
+      <div class="calhead"><button onclick="shiftMonth(-1)" aria-label="前の月">‹</button>
+        <div class="m">${y}年 ${m}月</div>
+        <button onclick="shiftMonth(1)" aria-label="次の月">›</button></div>
+      <div class="grid">${WD.map(w=>`<div class="wd">${w}</div>`).join('')}`;
+
+  // 先頭と末尾を空セルで埋める。埋めないと最後の行が7列に満たず、
+  // 下地（罫線の色）がそのまま見えて濃い塊になる。
+  const cells=[];
+  for (let i=0;i<lead0;i++) cells.push(null);
+  for (let d=1;d<=days;d++) cells.push(d);
+  while (cells.length%7) cells.push(null);
+  // 過去しかない先頭の週は描かない（選べない日でカレンダーが伸びるのを防ぐ）
+  const weeks=[];
+  for (let i=0;i<cells.length;i+=7) {
+    const w=cells.slice(i,i+7);
+    const alive=w.some(d=>d!==null && new Date(y,m-1,d)>=today);
+    if (alive||weeks.length) weeks.push(w);
+  }
+  for (const w of weeks) for (const d of w) {
+    if (d===null) { h+=`<div class="cell blank"></div>`; continue; }
+    const past=new Date(y,m-1,d)<today;
+    const on=n.days.includes(`${y}-${m}-${d}`);
+    const cls=['cell']; let click='';
+    if (past) cls.push('past');
+    else { cls.push('addable'); click=`onclick="toggleDay(${y},${m},${d})"`; }
+    if (on) cls.push('pick');
+    h+=`<button class="${cls.join(' ')}" ${click} ${click?'':'disabled'}
+      aria-label="${m}月${d}日${on?' 選択中':''}"><span class="d">${d}</span></button>`;
+  }
+  const sorted=[...n.days].map(k=>k.split('-').map(Number)).sort((a,b)=>new Date(a[0],a[1]-1,a[2])-new Date(b[0],b[1]-1,b[2]));
+  h+=`</div>
+      <p class="picked">${sorted.length
+        ? `<b>${sorted.length}日</b>　${sorted.map(p=>fmtS(new Date(p[0],p[1]-1,p[2]))).join('　')}`
+        : '<span class="note">日付を押して選ぶ</span>'}</p>
+    </div>
+
+    <div class="frow"><label>回答の期日<span class="req">*</span></label>
+      <div class="brow">
+        <input type="date" value="${dl.getFullYear()}-${pad(dl.getMonth()+1)}-${pad(dl.getDate())}"
+          onchange="setNDate(this.value)" aria-label="期日の日付">
+        <input type="time" value="${pad(dl.getHours())}:${pad(dl.getMinutes())}"
+          onchange="setNTime(this.value)" aria-label="期日の時刻">
+      </div>
+      <div class="chips" style="margin:10px 0 0">
+        <button onclick="presetDeadline(24)">明日</button>
+        <button onclick="presetDeadline(48)">明後日</button>
+        <button onclick="presetDeadline(168)">来週</button>
+      </div>
+      <p class="help">この時刻を過ぎると自動で決まります。</p></div>
+  </div>
+  <div class="create">
+    <button class="b" onclick="createFromDraft()">作る</button>
+    ${n.err?`<span class="err">${esc(n.err)}</span>`:''}
+  </div>`;
   return h;
 }
 
