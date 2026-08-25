@@ -463,6 +463,7 @@ async function sync() {
   if (eventId) await pull(true);
 }
 let lastSig = null;
+let lastRow = null;      // サーバに今入っているはずの内容。差分だけ書くために持っておく
 async function pull(fromSync) {
   if (mode!=='shared' || syncing) return false;
   syncing=true;
@@ -480,6 +481,7 @@ async function pull(fromSync) {
       (ans||[]).map(a=>[a.member, a.value])]);
     const changed = (sig !== lastSig); lastSig = sig;
     fromRow(ev, ans); state.now=new Date();
+    lastRow = toRow();          // ここが「サーバの内容」の基準になる
     let grew=false;
     if (gms) for (const m of gms) if (!state.members.includes(m)) { state.members.push(m); grew=true; }
     // 締切の判定は常駐サーバーではなく「誰かが画面を開いたとき」に走る。画面にもそう書いてある。
@@ -494,9 +496,20 @@ async function pull(fromSync) {
   } catch (e) { console.error(e); return false; }
   finally { syncing=false; }
 }
+/* 行を丸ごと上書きすると、同じ時間に別の人が触った変更まで巻き戻してしまう。
+   自分が実際に変えた項目だけを書く。触っていない項目は相手の変更が残る。
+   （同じ項目を同時に変えた場合だけは、あとから書いた方が残る） */
 async function persist() {
-  if (mode!=='shared') return;
-  try { await db.from('events').update(toRow()).eq('id',eventId); }
+  if (mode!=='shared' || !eventId) return;
+  const row = toRow();
+  let patch = row;
+  if (lastRow) {
+    patch = {};
+    for (const k of Object.keys(row))
+      if (k!=='id' && JSON.stringify(row[k]) !== JSON.stringify(lastRow[k])) patch[k]=row[k];
+    if (!Object.keys(patch).length) return;      // 変わっていないなら書かない
+  }
+  try { await db.from('events').update(patch).eq('id',eventId); lastRow = row; }
   catch (e) { console.error(e); toast('保存に失敗しました。通信を確認してください。'); }
 }
 async function saveAnswer() {
@@ -668,13 +681,22 @@ async function createGroup() {
   if (!me) { n.err='あなたの名前を入れてください。'; return render(); }
   if (me.length>20) { n.err='名前は20文字までです。'; return render(); }
   state.gid = newId(); state.gname=nm; state.gmembers=[me]; state.me=me;
-  state.gevents=[]; state.gans={}; state.ng=null;
+  state.gevents=[]; state.gans={};
   if (mode==='shared') {
     try { await db.from('groups').insert({ id:state.gid, name:nm, members:[] });
       await addMember(me);
       location.hash='g='+state.gid; }
-    catch (e) { console.error(e); toast('作成に失敗しました。通信を確認してください。'); return; }
+    catch (e) {
+      // 失敗したら入力欄に戻す。ここで state.ng を捨てると、
+      // もう一度「作る」を押したときに作成画面が壊れて操作不能になる。
+      console.error(e);
+      state.gid=null; state.gname=''; state.gmembers=[]; state.me='';
+      n.err='作れませんでした。通信を確かめて、もう一度押してください。';
+      toast('');
+      return render();
+    }
   }
+  state.ng=null;
   rememberGroup(state.gid, nm);
   state.view='group'; render();
   toast('できました。このURLをLINEに1回だけ貼れば、次からは貼り直し不要です。');
@@ -797,8 +819,15 @@ async function createFromDraft() {
   });
   if (mode==='shared') {
     eventId = newId();
-    try { await db.from('events').insert(toRow()); location.hash='e='+eventId; }
-    catch (err) { console.error(err); toast('作成に失敗しました。通信を確認してください。'); }
+    try { await db.from('events').insert(toRow()); lastRow = toRow(); location.hash='e='+eventId; }
+    catch (err) {
+      // 保存できていないのに「できました」と言ってはいけない。
+      // 言われた人はURLを配ってしまい、誰も回答できないまま気づかない。
+      console.error(err);
+      eventId=null; state.nd=n; n.err='作れませんでした。通信を確かめて、もう一度押してください。';
+      toast('');   // 前の「できました」が画面に残っていると、成功したように見える
+      state.view='new'; return render();
+    }
   }
   push('cand', `<b>${esc(ho)}</b> が「${esc(t)}」を作成。候補${cands.length}日。`);
   go('answer');
@@ -897,7 +926,11 @@ function finalize(reason, missList) {
   // 違う式にすると「無理と線を引いた日が確定する」という矛盾が起きる。
   if (win.score<=0) {
     state.failed=true;
-    push('none','どの候補日も0点以下でした（○より×が多い）。候補日を足して再調整してください。');
+    // 「×が多かった」と「そもそも誰も答えなかった」は別のこと。
+    // 一緒くたにすると、次に何をすればいいかを間違える。
+    push('none', answered().length===0
+      ? '締切までに誰も回答しませんでした。期日を延ばすか、候補日を見直してもう一度声をかけてください。'
+      : 'どの候補日も0点以下でした（○より×が多い）。候補日を足して再調整してください。');
     return false;
   }
   if (missList && missList.length) push('miss', `<b>${esc(missList.join('・'))}</b> は未回答のまま確定。`);
