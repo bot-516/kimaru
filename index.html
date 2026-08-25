@@ -522,12 +522,49 @@ function forgetGroup(id) {
   render();
 }
 
+/* メンバーは group_members に「1人1行」で入れる。
+   グループの行に配列でまとめて持つと、2人がほぼ同時に参加したとき、
+   後から保存した人が前の人の名前ごと上書きして消してしまう。
+   回答（answers）を最初から別テーブルにしたのと同じ理由。
+
+   まだ group_members を作っていないSupabaseでも動くように、
+   失敗したら昔のやり方（グループの行に配列）へ自動で落ちる。 */
+let membersTable = true;      // 一度でも失敗したら false にして、以後は聞きに行かない
+async function readMembers() {
+  if (!membersTable) return null;
+  const {data:rows, error} = await db.from('group_members').select('*').eq('group_id',state.gid);
+  if (error) { membersTable=false; return null; }
+  return (rows||[]).slice()
+    .sort((a,b)=> String(a.joined_at||'').localeCompare(String(b.joined_at||'')))
+    .map(r=>r.member);
+}
+async function addMember(nm) {
+  // 「その人の行を1つ書く」だけ。他の人の行には一切触らないので、同時でも消えない
+  if (membersTable) {
+    const {error} = await db.from('group_members').upsert({ group_id:state.gid, member:nm });
+    if (!error) return;
+    membersTable=false;
+  }
+  // 落ちたとき用。書く直前に最新を読み直してから足すので、被害はかなり小さくなる
+  const {data:g} = await db.from('groups').select('members').eq('id',state.gid).maybeSingle();
+  const list = (g && g.members) || [];
+  if (!list.includes(nm)) await db.from('groups').update({ members:[...list,nm] }).eq('id',state.gid);
+}
+
 async function pullGroup() {
   if (mode!=='shared' || !state.gid) return false;
   try {
     const {data:g} = await db.from('groups').select('*').eq('id',state.gid).maybeSingle();
     if (!g) return false;
-    state.gname=g.name||''; state.gmembers=g.members||[];
+    state.gname=g.name||'';
+    let ms = await readMembers();
+    if (ms === null) ms = (g.members||[]).slice();              // テーブルが無い環境
+    // 旧いグループ（配列で持っていた頃のもの）は、初回に1行ずつへ移し替える
+    else if (!ms.length && (g.members||[]).length) {
+      for (const m of g.members) { try { await addMember(m); } catch (e) {} }
+      ms = g.members;
+    }
+    state.gmembers = ms;
     const {data:evs} = await db.from('events').select('*').eq('group_id',state.gid).order('created_at',{ascending:false});
     state.gevents = (evs||[]).map(e=>({ ...e, deadline:new Date(e.deadline),
       candidates:(e.candidates||[]).map(c=>({id:c.id,date:new Date(c.date)})) }));
@@ -545,7 +582,8 @@ async function pullGroup() {
 }
 async function saveGroup() {
   if (mode!=='shared' || !state.gid) return;
-  try { await db.from('groups').update({ name:state.gname, members:state.gmembers }).eq('id',state.gid); }
+  // members は group_members 側が正。ここでは名前だけ更新する
+  try { await db.from('groups').update({ name:state.gname }).eq('id',state.gid); }
   catch (e) { console.error(e); toast('グループの保存に失敗しました。'); }
 }
 
@@ -593,7 +631,8 @@ async function createGroup() {
   state.gid = newId(); state.gname=nm; state.gmembers=[me]; state.me=me;
   state.gevents=[]; state.gans={}; state.ng=null;
   if (mode==='shared') {
-    try { await db.from('groups').insert({ id:state.gid, name:nm, members:[me] });
+    try { await db.from('groups').insert({ id:state.gid, name:nm, members:[] });
+      await addMember(me);
       location.hash='g='+state.gid; }
     catch (e) { console.error(e); toast('作成に失敗しました。通信を確認してください。'); return; }
   }
@@ -606,7 +645,13 @@ async function joinGroup() {
   const nm=((document.getElementById('gJoin')?.value)||'').trim();
   if (!nm) return toast('名前を入れてください。');
   if (nm.length>20) return toast('名前は20文字までです。');
-  if (!state.gmembers.includes(nm)) { state.gmembers.push(nm); await saveGroup(); }
+  if (!state.gmembers.includes(nm)) {
+    state.gmembers.push(nm);
+    if (mode==='shared') {
+      try { await addMember(nm); }
+      catch (e) { console.error(e); toast('参加の保存に失敗しました。通信を確認してください。'); }
+    }
+  }
   state.me=nm; state.joining=false; render();
 }
 function pickMe(i){ state.me=state.gmembers[i]; render(); }
