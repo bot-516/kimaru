@@ -527,6 +527,7 @@ async function pull(fromSync) {
    （同じ項目を同時に変えた場合だけは、あとから書いた方が残る） */
 async function persist() {
   if (mode!=='shared' || !eventId) return;
+  const forId = eventId;         // このpersist()が対象にしているイベント。await中に切り替わりうる
   const row = toRow();
   let patch = row;
   if (lastRow) {
@@ -535,9 +536,13 @@ async function persist() {
       if (k!=='id' && JSON.stringify(row[k]) !== JSON.stringify(lastRow[k])) patch[k]=row[k];
     if (!Object.keys(patch).length) return;      // 変わっていないなら書かない
   }
-  try { const {error} = await db.from('events').update(patch).eq('id',eventId);
+  try { const {error} = await db.from('events').update(patch).eq('id',forId);
     if (error) throw error;
-    lastRow = row; }
+    // 保存が完了するまでの間にopenEvent()/backToGroup()で別のイベントへ切り替えていたら、
+    // lastRowを書き換えてはいけない。切り替え先のlastRowを対象外のデータで汚してしまい、
+    // 次にこのイベントを開き直したとき「切り替え先の内容をこのイベントとして保存する」
+    // という誤爆（pull()のガード誤発火）につながる。
+    if (eventId===forId) lastRow = row; }
   catch (e) { console.error(e); toast('保存に失敗しました。通信を確認してください。'); }
 }
 async function saveAnswer() {
