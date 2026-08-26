@@ -1,2 +1,4 @@
-node_modules/ 
-tests/audit_result.json 
+node_modules/
+tests/audit_result.json
+.claude/
+*.png

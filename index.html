@@ -393,11 +393,14 @@ const newId = () => Math.random().toString(36).slice(2,6) + Math.random().toStri
 function toRow() {
   return { id:eventId, title:state.title, group_name:state.group, host:state.host, slot:state.slot,
     place:state.place||null, memo:state.memo||null, group_id:state.groupId||null,
-    deadline:state.deadline.toISOString(), members:state.members,
+    // 配列をそのまま渡すと lastRow が state と同じ実体を指してしまい、
+    // あとで state.members に足した内容が lastRow にも映る。すると差分保存が
+    // 「変わっていない」と判断して、その追加が永久に保存されない。必ず複製する。
+    deadline:state.deadline.toISOString(), members:state.members.slice(),
     candidates:state.candidates.map(c=>({id:c.id,date:c.date.toISOString()})),
     confirmed:state.confirmed, failed:state.failed,
     feed:state.feed.slice(0,60).map(f=>({at:f.at.toISOString(),type:f.type,msg:f.msg})),
-    sent_reminders:state.sentReminders };
+    sent_reminders:state.sentReminders.slice() };
 }
 function fromRow(row, answerRows) {
   state.title=row.title; state.group=row.group_name; state.host=row.host;
