@@ -406,6 +406,13 @@ function fromRow(row, answerRows) {
   state.deadline=new Date(row.deadline);
   state.members=row.members||[];
   state.candidates=(row.candidates||[]).map(c=>({id:c.id,date:new Date(c.date)}));
+  // seqはDBに持っていない（IDの採番用にしか使わない）ので、読み込むたびに
+  // 「今ある候補日IDの最大＋1」へ合わせ直す。合わせないと、リロードのたびに
+  // seqが初期値へ戻り、既存の候補日と同じIDを新しく振ってしまうことがある。
+  state.seq = 1 + state.candidates.reduce((m,c)=>{
+    const n = parseInt(String(c.id).replace(/^c/,''),10);
+    return Number.isFinite(n) && n>m ? n : m;
+  }, 0);
   state.confirmed=row.confirmed; state.failed=!!row.failed;
   const prevLen = state.feed.length;
   state.feed=(row.feed||[]).map(f=>({at:new Date(f.at),type:f.type,msg:f.msg}));
