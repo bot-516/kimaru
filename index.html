@@ -532,8 +532,9 @@ async function persist() {
 async function saveAnswer() {
   if (mode!=='shared') return true;
   try {
-    await db.from('answers').upsert({ event_id:eventId, member:state.me,
+    const {error} = await db.from('answers').upsert({ event_id:eventId, member:state.me,
       value:state.answers[state.me]||{}, updated_at:new Date().toISOString() });
+    if (error) throw error;
     return true;
   } catch (e) { console.error(e); toast('回答の保存に失敗しました。もう一度押してください。'); return false; }
 }
@@ -658,7 +659,8 @@ async function pullGroup() {
 async function saveGroup() {
   if (mode!=='shared' || !state.gid) return;
   // members は group_members 側が正。ここでは名前だけ更新する
-  try { await db.from('groups').update({ name:state.gname }).eq('id',state.gid); }
+  try { const {error} = await db.from('groups').update({ name:state.gname }).eq('id',state.gid);
+    if (error) throw error; }
   catch (e) { console.error(e); toast('グループの保存に失敗しました。'); }
 }
 
@@ -1069,8 +1071,14 @@ async function submitAnswer() {
     const el=document.querySelector('.arow.todo'); if (el) el.scrollIntoView({block:'center'});
     return;
   }
+  const prevAnswer = state.answers[me];
   state.answers[me]={...a};
-  if (!await saveAnswer()) return;           // 保存できていないのに「回答済み」にしない
+  // saveAnswer()はstate.answers[me]の中身を送るので、送信前に一旦入れる必要がある。
+  // 失敗したら、回答済み扱いにならないよう元に戻す（表示だけでなく状態そのものを戻す）。
+  if (!await saveAnswer()) {
+    if (prevAnswer===undefined) delete state.answers[me]; else state.answers[me]=prevAnswer;
+    render(); return;
+  }
   state.draft=null;
   push('answer', `<b>${esc(me)}</b> が回答。（未回答 残り${unanswered().length}人）`);
   tick(); await persist(); go('board');
