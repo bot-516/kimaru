@@ -489,6 +489,10 @@ async function pull(fromSync) {
       ev.title, ev.slot, ev.place, ev.memo, (ev.feed||[]).length, gms,
       (ans||[]).map(a=>[a.member, a.value])]);
     const changed = (sig !== lastSig); lastSig = sig;
+    // 直前の保存がまだサーバーに届いていない編集を抱えているなら、ここで
+    // サーバーの古い値を読み込んで上書きしてはいけない（persist()の再送が消えてしまう）。
+    // 先にもう一度保存を試みて、届いてから次の同期で取り込む。
+    if (lastRow && JSON.stringify(toRow()) !== JSON.stringify(lastRow)) { await persist(); return true; }
     fromRow(ev, ans); state.now=new Date();
     lastRow = toRow();          // ここが「サーバの内容」の基準になる
     let grew=false;
