@@ -721,14 +721,19 @@ async function createGroup() {
   state.gid = newId(); state.gname=nm; state.gmembers=[me]; state.me=me;
   state.gevents=[]; state.gans={};
   if (mode==='shared') {
-    try { const {error} = await db.from('groups').insert({ id:state.gid, name:nm, members:[] });
+    const gid=state.gid; let inserted=false;
+    try { const {error} = await db.from('groups').insert({ id:gid, name:nm, members:[] });
       if (error) throw error;
+      inserted=true;
       await addMember(me);
-      location.hash='g='+state.gid; }
+      location.hash='g='+gid; }
     catch (e) {
       // 失敗したら入力欄に戻す。ここで state.ng を捨てると、
       // もう一度「作る」を押したときに作成画面が壊れて操作不能になる。
       console.error(e);
+      // groups行のinsertまでは成功していた場合、そのまま残すと誰も辿り着けない孤立行になる。
+      // 消せるものは消しておく（消せなくても実害は孤立データが残るだけなので、失敗は無視してよい）。
+      if (inserted) db.from('groups').delete().eq('id',gid).then(()=>{}, err=>console.error(err));
       state.gid=null; state.gname=''; state.gmembers=[]; state.me='';
       n.err='作れませんでした。通信を確かめて、もう一度押してください。';
       toast('');
