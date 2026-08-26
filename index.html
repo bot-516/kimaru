@@ -588,11 +588,15 @@ function forgetGroup(id) {
 
    まだ group_members を作っていないSupabaseでも動くように、
    失敗したら昔のやり方（グループの行に配列）へ自動で落ちる。 */
-let membersTable = true;      // 一度でも失敗したら false にして、以後は聞きに行かない
+let membersTable = true;      // group_members テーブル自体が無いと分かったら false にして、以後は聞きに行かない
+// PostgRESTの undefined_table（テーブルが無い）は '42P01'。それ以外（一時的な通信エラー・RLS等）は
+// テーブルが無いとは限らないので、membersTable を落とさない。落とすと以後ずっと危険な配列書き込みに
+// フォールバックし続けてしまう。
+const isMissingTable = e => e && e.code==='42P01';
 async function readMembersOf(gid) {
   if (!membersTable || !gid) return null;
   const {data:rows, error} = await db.from('group_members').select('*').eq('group_id',gid);
-  if (error) { membersTable=false; return null; }
+  if (error) { if (isMissingTable(error)) membersTable=false; return null; }
   return (rows||[]).slice()
     .sort((a,b)=> String(a.joined_at||'').localeCompare(String(b.joined_at||'')))
     .map(r=>r.member);
@@ -600,7 +604,7 @@ async function readMembersOf(gid) {
 async function readMembers() {
   if (!membersTable) return null;
   const {data:rows, error} = await db.from('group_members').select('*').eq('group_id',state.gid);
-  if (error) { membersTable=false; return null; }
+  if (error) { if (isMissingTable(error)) membersTable=false; return null; }
   return (rows||[]).slice()
     .sort((a,b)=> String(a.joined_at||'').localeCompare(String(b.joined_at||'')))
     .map(r=>r.member);
@@ -610,6 +614,7 @@ async function addMember(nm) {
   if (membersTable) {
     const {error} = await db.from('group_members').upsert({ group_id:state.gid, member:nm });
     if (!error) return;
+    if (!isMissingTable(error)) throw error;   // 一時的な失敗はフォールバックに逃がさず、呼び出し元に伝える
     membersTable=false;
   }
   // 落ちたとき用。書く直前に最新を読み直してから足すので、被害はかなり小さくなる
