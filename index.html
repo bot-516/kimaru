@@ -1136,9 +1136,19 @@ function copyText(text,done) {
   const ta=document.createElement('textarea');
   ta.value=text; ta.style.position='fixed'; ta.style.opacity='0';
   document.body.appendChild(ta); ta.select();
-  try{document.execCommand('copy');}catch(e){}
-  try{navigator.clipboard.writeText(text);}catch(e){}
-  ta.remove(); toast(done);
+  let ok=false;
+  try{ ok=document.execCommand('copy'); }catch(e){}
+  ta.remove();
+  if (ok) { toast(done); return; }
+  // execCommandが効かない環境（LINEのアプリ内ブラウザなど）向けの後がけ。
+  // これも失敗しうるので、成功したことにせず結果を見てから伝える。
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(
+      ()=>toast(done),
+      ()=>toast('コピーできませんでした。長押しして手動でコピーしてください。'));
+  } else {
+    toast('コピーできませんでした。長押しして手動でコピーしてください。');
+  }
 }
 function inviteText() {
   const cs=sortedCands();
