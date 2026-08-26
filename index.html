@@ -492,7 +492,9 @@ async function pull(fromSync) {
     // 直前の保存がまだサーバーに届いていない編集を抱えているなら、ここで
     // サーバーの古い値を読み込んで上書きしてはいけない（persist()の再送が消えてしまう）。
     // 先にもう一度保存を試みて、届いてから次の同期で取り込む。
-    if (lastRow && JSON.stringify(toRow()) !== JSON.stringify(lastRow)) { await persist(); return true; }
+    // ただし lastRow が別のイベントのものなら（openEvent()などで画面遷移した直後）、
+    // 比較そのものが無意味なので普通に読み込む。他人のイベントに誤って書き込んでしまう。
+    if (lastRow && lastRow.id===eventId && JSON.stringify(toRow()) !== JSON.stringify(lastRow)) { await persist(); return true; }
     fromRow(ev, ans); state.now=new Date();
     lastRow = toRow();          // ここが「サーバの内容」の基準になる
     let grew=false;
