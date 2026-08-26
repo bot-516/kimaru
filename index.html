@@ -609,7 +609,10 @@ async function addMember(nm) {
   // 落ちたとき用。書く直前に最新を読み直してから足すので、被害はかなり小さくなる
   const {data:g} = await db.from('groups').select('members').eq('id',state.gid).maybeSingle();
   const list = (g && g.members) || [];
-  if (!list.includes(nm)) await db.from('groups').update({ members:[...list,nm] }).eq('id',state.gid);
+  if (!list.includes(nm)) {
+    const {error} = await db.from('groups').update({ members:[...list,nm] }).eq('id',state.gid);
+    if (error) throw error;
+  }
 }
 
 async function pullGroup() {
@@ -718,11 +721,16 @@ async function joinGroup() {
   const nm=((document.getElementById('gJoin')?.value)||'').trim();
   if (!nm) return toast('名前を入れてください。');
   if (nm.length>20) return toast('名前は20文字までです。');
-  if (!state.gmembers.includes(nm)) {
-    state.gmembers.push(nm);
-    if (mode==='shared') {
-      try { await addMember(nm); }
-      catch (e) { console.error(e); toast('参加の保存に失敗しました。通信を確認してください。'); }
+  const isNew = !state.gmembers.includes(nm);
+  if (isNew) state.gmembers.push(nm);
+  if (isNew && mode==='shared') {
+    try { await addMember(nm); }
+    catch (e) {
+      console.error(e);
+      // 保存できていないのに参加したことにすると、この人を含んだ日程が作られてしまう。
+      state.gmembers = state.gmembers.filter(m=>m!==nm);
+      toast('参加の保存に失敗しました。通信を確認してください。');
+      return render();
     }
   }
   state.me=nm; state.joining=false; render();
