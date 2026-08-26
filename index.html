@@ -509,7 +509,9 @@ async function persist() {
       if (k!=='id' && JSON.stringify(row[k]) !== JSON.stringify(lastRow[k])) patch[k]=row[k];
     if (!Object.keys(patch).length) return;      // 変わっていないなら書かない
   }
-  try { await db.from('events').update(patch).eq('id',eventId); lastRow = row; }
+  try { const {error} = await db.from('events').update(patch).eq('id',eventId);
+    if (error) throw error;
+    lastRow = row; }
   catch (e) { console.error(e); toast('保存に失敗しました。通信を確認してください。'); }
 }
 async function saveAnswer() {
