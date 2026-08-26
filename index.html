@@ -1139,6 +1139,10 @@ function removeMemberAt(i) {
   state.members=state.members.filter(m=>m!==n);
   delete state.answers[n];
   if (state.me===n) state.me='';
+  // ホストが自分自身を外すと、state.hostがもう居ない名前のまま残り、
+  // isHost()が誰に対してもfalseになって以後誰も変更できなくなっていた。
+  // ホスト無し（state.host=''）は元々「誰でも管理できる」扱いなので、そこに戻す。
+  if (state.host===n) state.host='';
   state.pendingDel=null; persist(); render();
 }
 
