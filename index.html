@@ -1646,7 +1646,7 @@ function viewNewGroup() {
       <div class="wordmark" style="font-size:34px">キ<em>マ</em>る</div>
     </div>
     <section><div class="slabel">前に使ったグループ</div>
-      <ul class="evlist">${rec.map(g=>`<li><button class="ev" onclick="gotoGroup('${esc(g.id)}')">
+      <ul class="evlist">${rec.map(g=>`<li><button class="ev" onclick="gotoGroup(${esc(JSON.stringify(g.id))})">
         <div class="t">${esc(g.name||'（名前なし）')}</div></button></li>`).join('')}</ul>
       <div class="brow" style="margin-top:14px">
         <button class="b line" onclick="openNewGroup(true)">新しいグループを作る</button></div>
