@@ -1308,7 +1308,7 @@ function renderStatus() {
     lead=`${esc(state.me)} さん`; head='回答がまだ送信されていません';
     sub='<span class="np">このままだと保存されません</span>';
     act=`<button class="b sm" onclick="submitAnswer()">この内容で送信する</button>`;
-  } else if (isHost() && state.members.length<=1) {
+  } else if (isHost() && state.members.length<=1 && !hasAnswered(state.me)) {
     lead='つぎにやること'; head='このURLをグループに送る';
     sub=dlNote; act=`<button class="b sm" onclick="copyLink()">招待の文面をコピー</button>`;
   } else if (!hasAnswered(state.me)) {
