@@ -1166,22 +1166,28 @@ function downloadIcs() {
 
 let notice='';
 function toast(m){ notice=m; renderToast(); clearTimeout(toast._t); toast._t=setTimeout(()=>{notice='';renderToast();},4000); }
+let copySeq=0;
 function copyText(text,done) {
+  // 違うボタンをほぼ同時に押すと、あとのexecCommand（同期）が先に終わり、
+  // 先に押した方のclipboard.writeText（非同期）が後から解決してトーストを
+  // 上書きすることがあった。呼び出しごとに番号を振り、自分が最新のときだけ表示する。
+  const seq = ++copySeq;
+  const show = m => { if (seq===copySeq) toast(m); };
   const ta=document.createElement('textarea');
   ta.value=text; ta.style.position='fixed'; ta.style.opacity='0';
   document.body.appendChild(ta); ta.select();
   let ok=false;
   try{ ok=document.execCommand('copy'); }catch(e){}
   ta.remove();
-  if (ok) { toast(done); return; }
+  if (ok) { show(done); return; }
   // execCommandが効かない環境（LINEのアプリ内ブラウザなど）向けの後がけ。
   // これも失敗しうるので、成功したことにせず結果を見てから伝える。
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text).then(
-      ()=>toast(done),
-      ()=>toast('コピーできませんでした。長押しして手動でコピーしてください。'));
+      ()=>show(done),
+      ()=>show('コピーできませんでした。長押しして手動でコピーしてください。'));
   } else {
-    toast('コピーできませんでした。長押しして手動でコピーしてください。');
+    show('コピーできませんでした。長押しして手動でコピーしてください。');
   }
 }
 function inviteText() {
