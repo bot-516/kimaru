@@ -1784,10 +1784,13 @@ function viewGroup() {
     h+=`<ul class="evlist">${live.map(e=>{
       const s=evStatus(e);
       const hrs=Math.max(0,Math.round(s.left/3600000));
+      // 締切を過ぎたイベントは、誰かがそのページを開くまで確定処理が走らない（HANDOFF 4章）。
+      // 「あと0時間」のままだと締切が壊れて見えるので、開けば決まることを直接書く。
+      const left = s.left>0 ? `あと${hrs}時間` : '締切済み・開くと決まります';
       const mine = state.me ? (s.mine ? '回答済み' : '未回答') : '';
       return `<li><button class="ev ${state.me&&!s.mine?'todo':''}" onclick="openEvent('${e.id}')">
         <div class="t">${esc(e.title)}${state.me&&!s.mine?'<span class="badge">要回答</span>':''}</div>
-        <div class="s">${s.best?`このままだと <b>${fmtD(s.best.c.date)}</b>　`:''}あと${hrs}時間　${s.done}/${s.total}人が回答${mine?'　'+mine:''}</div>
+        <div class="s">${s.best?`このままだと <b>${fmtD(s.best.c.date)}</b>　`:''}${left}　${s.done}/${s.total}人が回答${mine?'　'+mine:''}</div>
       </button></li>`;}).join('')}</ul>`;
   }
   h+=`<div class="brow" style="margin-top:14px">
