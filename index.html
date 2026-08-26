@@ -1095,7 +1095,8 @@ function setTitle(v){ state.title=v; }
 function setGroup(v){ state.group=v; }
 function setDeadline(v){ if (!v||!needHost()) return; state.deadline=new Date(v); state.sentReminders=[]; persist(); render(); }
 function setSlot(which,v) {
-  if (!v) return;
+  if (!v || !needHost()) return;
+  if (state.confirmed) return toast('確定後は「再調整する」を押してから時間を変更してください。');
   const p=state.slot.split('-').map(s=>s.trim());
   state.slot = which==='s' ? `${v} - ${p[1]||'13:00'}` : `${p[0]||'12:15'} - ${v}`;
   const [hh,mm]=state.slot.split('-')[0].trim().split(':').map(Number);
