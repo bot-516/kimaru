@@ -418,6 +418,15 @@ function fromRow(row, answerRows) {
   if (state.me && !state.members.includes(state.me)) state.me='';
 }
 
+// 最初にリンクを開いた瞬間だけは、一度失敗しても「存在しない」と決めつけない。
+// 電波が悪いだけで本物のURLが無効扱いになり、入口に戻されてしまうのを防ぐ。
+async function bootPull(fn, tries=3) {
+  for (let i=0; i<tries; i++) {
+    if (await fn()) return true;
+    if (i<tries-1) await new Promise(r=>setTimeout(r,400));
+  }
+  return false;
+}
 async function boot() {
   if (!SUPABASE.url || !SUPABASE.key) { render(); return; }
   try {
@@ -426,10 +435,10 @@ async function boot() {
     const q = new URLSearchParams(location.hash.slice(1));
     eventId = q.get('e'); state.gid = q.get('g');
     if (eventId) {
-      if (await pull()) { if (state.groupId) { state.gid=state.groupId; await pullGroup(); } }
+      if (await bootPull(()=>pull())) { if (state.groupId) { state.gid=state.groupId; await pullGroup(); } }
       else { eventId=null; location.hash=''; openNewGroup(); }
     } else if (state.gid) {
-      if (await pullGroup()) state.view='group';
+      if (await bootPull(()=>pullGroup())) state.view='group';
       else { state.gid=null; location.hash=''; openNewGroup(); }
     } else {
       // 以前は勝手にイベントを作っていた。作った覚えのないものの中に放り込まれると、
