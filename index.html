@@ -439,6 +439,10 @@ async function boot() {
   try {
     db = window.supabase.createClient(SUPABASE.url, SUPABASE.key);
     mode='shared'; state.now=new Date();
+    // state.me はデモ用の初期状態で「りくと」が入ったまま。共有モードではこの名前を
+    // 誰も選んでいないので、本物のグループにたまたま同名のメンバーがいると、
+    // 初めて開いた人が知らないうちにその人として振る舞ってしまう。
+    state.me='';
     const q = new URLSearchParams(location.hash.slice(1));
     eventId = q.get('e'); state.gid = q.get('g');
     if (eventId) {

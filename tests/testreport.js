@@ -64,8 +64,11 @@ const TARGET = 'file://' + path.resolve(__dirname, '..', 'index.html').replace(/
   console.log('準備:', await p.evaluate(()=>({イベント参加者:state.members})));
 
   // ---------- ① 後から入った人が回答できるか ----------
+  // 初めてリンクを開いた人はstate.meが空なので、参加フォームは最初から開いている
+  // （「別の人を追加する」の表示はstate.meが既にある人向け。無ければ押さなくてよい）。
   await p.goto(base+'?a=1#g='+gid); await p.waitForTimeout(1200);
-  await p.click('button:has-text("別の人を追加する")'); await p.waitForTimeout(200);
+  const addBtn = p.locator('button:has-text("別の人を追加する")');
+  if (await addBtn.count()) { await addBtn.click(); await p.waitForTimeout(200); }
   await p.fill('#gJoin','たなか'); await p.click('button.b:has-text("参加する")'); await p.waitForTimeout(800);
   console.log('① グループに追加:', await p.evaluate(()=>state.gmembers));
   console.log('   グループ画面の回答状況:', await p.evaluate(()=>{
