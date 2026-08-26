@@ -683,7 +683,8 @@ async function createGroup() {
   state.gid = newId(); state.gname=nm; state.gmembers=[me]; state.me=me;
   state.gevents=[]; state.gans={};
   if (mode==='shared') {
-    try { await db.from('groups').insert({ id:state.gid, name:nm, members:[] });
+    try { const {error} = await db.from('groups').insert({ id:state.gid, name:nm, members:[] });
+      if (error) throw error;
       await addMember(me);
       location.hash='g='+state.gid; }
     catch (e) {
