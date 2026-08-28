@@ -68,7 +68,8 @@ const NAMES = ['けんじ','りくと','あおい','はると','ゆい'];
   console.log('② 同時参加の直後（画面）:', await p.evaluate(()=>state.gmembers));
 
   // サーバに何人残っているか
-  await p.goto(TARGET+'#g='+gid); await p.waitForTimeout(2000);
+  for (let i=0;i<4;i++){ await p.goto(TARGET+'?a='+i+'#g='+gid); await p.waitForTimeout(1800);
+    if (await p.evaluate(()=>state.view==='group')) break; }
   const after = await p.evaluate(()=>state.gmembers);
   console.log('③ 開き直し（サーバの中身）:', after, '→', after.length+'人');
   console.log('   全員そろったか:', NAMES.every(n=>after.includes(n)) ? '○ OK' : '× 欠けている: '+NAMES.filter(n=>!after.includes(n)));
@@ -79,9 +80,13 @@ const NAMES = ['けんじ','りくと','あおい','はると','ゆい'];
     await db.from('groups').insert({ id, name:'前からあるグループ', members:['さやか','たける','みなみ'] });
     return id;
   });
-  await p.goto(TARGET+'?r=1#g='+oldId); await p.waitForTimeout(2500);
+  // 偽サーバはsessionStorage上にあるので、開き直しのタイミングで読めないことがある（テスト側の都合）
+  const openG = async (tag,id) => { for (let i=0;i<4;i++) {
+      await p.goto(TARGET+'?'+tag+i+'#g='+id); await p.waitForTimeout(1800);
+      if (await p.evaluate(()=>state.view==='group')) return true; } return false; };
+  await openG('r',oldId);
   console.log('④ 旧グループを開く:', await p.evaluate(()=>({gid:state.gid, view:state.view, ms:state.gmembers, groups:Object.keys(window.__s.groups)})));
-  await p.goto(TARGET+'?r=2#g='+oldId); await p.waitForTimeout(2500);
+  await openG('s',oldId);
   console.log('⑤ もう一度開く（引っ越し済みか）:', await p.evaluate(()=>state.gmembers),
               '/ 行数:', await p.evaluate(()=>window.__s.gm.filter(x=>x.group_id==='oldgrp01').length));
 
